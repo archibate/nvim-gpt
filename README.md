@@ -28,7 +28,7 @@ In the GPT prompt:
 - But we've already got some nice templates for you, to use the template named 'fix' for example, simply type: `@f` or `@fix`, it will be automatically replaced by `How to fix this error?`
 - There is also a useful template called `@q` or `@quote` which is equivalent to `Please wrap the final answer with triple quotes`, which not only gives us a better syntax highlighting for code, but also make it easier to seperate the real answer from GPT's descriptive text like `Sure` or `Here is the result:`, see below.
 - See [keymaps.py](rplugin/python3/py_nvim_gpt/keymaps.py) for a complete list of all templates provided by default, you may override the templates in the setup option `question_templates = ...`, see bottom.
-- If you want to edit multi-line questions, simply press `<Esc>` and `i` to enter insert mode again. Now pressing `<CR>` in insert mode won't trigger submit anymore, and you may use `<CR>` or `o` in normal mode to compose multi-line questions. After finished editing the question, press `<CR>` in normal mode to submit. The question buffer is remained when you use `r` to regenerate answer from GPT.
+- If you want to edit multi-line questions, simply press `<Esc>` then `i` to enter insert mode again. Now pressing `<CR>` in insert mode won't trigger submit anymore, and you may use `<CR>` or `o` in normal mode to compose multi-line questions. After finished editing the question, press `<CR>` in normal mode to submit. The question buffer is remained when you use `r` to regenerate answer from GPT.
 
 In the GPT window:
 
@@ -87,7 +87,7 @@ pip install openai
 export OPENAI_API_KEY=sk-**********  # replace this with your API key
 ```
 
-3. and then restart your shell, enter nvim and choose `gpt-3.5-turbo` as model.
+3. and then restart your shell, enter nvim and choose `gpt-3.5-turbo` as model, which is default.
 
 ### For Bing AI users
 
@@ -101,7 +101,7 @@ pip install EdgeGPT
 
 2. Paste the cookies into file `~/.bing-cookies.json`.
 
-3. Enter nvim and choose `bing-balanced` as backend.
+3. Enter nvim and `:GPTModel balanced`. For setting Bing AI as default, add `model = 'balanced'` to setup options.
 
 ### For Google users
 
@@ -110,6 +110,8 @@ pip install EdgeGPT
 ```bash
 pip install googlesearch-python
 ```
+
+Then enter nvim and `:GPTModel googlesearch-python`. Now search current word with `gy<CR>`, current line with `gs<CR>`.
 
 ## Keymaps
 
@@ -133,24 +135,28 @@ Apart from universal keymaps above, inside the GPT window, which is not modifiab
 
 ```vim
 " (i)nput (a)ccept (r)egenerate (d)iscard e(x)ecute (s)top (q)uit
-nnoremap <buffer> i :GPT<Space>
-nnoremap <buffer><silent> I :GPTMultiline<CR>
+nnoremap <buffer><silent> i <Cmd>GPT<CR>
 nnoremap <buffer><silent> a <Cmd>GPTAccept<CR>
 nnoremap <buffer><silent> A <Cmd>GPTAccept!<CR>
-nnoremap <buffer><silent> r <Cmd>GPTRegenerate<CR>
+nnoremap <buffer><silent> r <Cmd>GPTRegenerate!<CR>
 nnoremap <buffer><silent> dd <Cmd>GPTDiscard<CR>
 nnoremap <buffer><silent> x <Cmd>GPTExecute<CR>
 nnoremap <buffer><silent> s <Cmd>GPTStop<CR>
 nnoremap <buffer><silent> q <Cmd>wincmd q<CR>
-```
 nnoremap <buffer><silent> <Esc> <Cmd>wincmd q<CR>
+```
 
 ### GPT multiline edit keymaps
 
 ```vim
 nnoremap <buffer><silent> <CR> <Cmd>GPTMultiline<CR>
+inoremap <expr><buffer><silent> <CR> (!exists('b:_no_enter_submit') ? '<Esc><Cmd>GPTMultiline<CR>' : '<CR>')
+snoremap <expr><buffer><silent> <CR> (!exists('b:_no_enter_submit') ? '<Esc><Cmd>GPTMultiline<CR>' : '<CR>')
+inoremap <buffer><silent> <Esc> <Esc><Cmd>let b:_no_enter_submit = 1<CR>
+snoremap <buffer><silent> <Esc> <Esc><Cmd>let b:_no_enter_submit = 1<CR>
 nnoremap <buffer><silent> q <Cmd>wincmd q<CR>
 nnoremap <buffer><silent> <Esc> <Cmd>wincmd q<CR>
+autocmd BufLeave <buffer={bufnr}> exec bufwinnr({bufnr}) == -1 ? "" : bufwinnr({bufnr}) . "wincmd q"
 ```
 
 ## All setup options

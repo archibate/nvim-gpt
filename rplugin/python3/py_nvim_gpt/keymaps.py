@@ -19,7 +19,6 @@ inoremap <buffer><silent> <Esc> <Esc><Cmd>let b:_no_enter_submit = 1<CR>
 snoremap <buffer><silent> <Esc> <Esc><Cmd>let b:_no_enter_submit = 1<CR>
 nnoremap <buffer><silent> q <Cmd>wincmd q<CR>
 nnoremap <buffer><silent> <Esc> <Cmd>wincmd q<CR>
-autocmd BufEnter <buffer={bufnr}> norm! $
 autocmd BufLeave <buffer={bufnr}> exec bufwinnr({bufnr}) == -1 ? "" : bufwinnr({bufnr}) . "wincmd q"
 '''
 
@@ -51,7 +50,4 @@ GPTTemplate m,multiple Please provide multiple different versions of answer for 
 GPTTemplate g,grammar Fix possible grammar issues or typos in my writing.
 GPTTemplate wo,wording Rewrite with better choices of words.
 GPTTemplate tr,translate Translate from Chinese to English, or English to Chinese.
-'''
-
-default_keymaps = '''
 '''
