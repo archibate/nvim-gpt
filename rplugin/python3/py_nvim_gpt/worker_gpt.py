@@ -1,3 +1,5 @@
+import os
+
 from .worker import IWorker, WorkerFactory
 from .io_tags import Done, UpdateParams, Reset, Rewind
 
@@ -11,13 +13,18 @@ class Worker_ChatGPT(IWorker):
             temperature = 1,
             top_p = 1,
             n = 1,
-            stream = False,
             presence_penalty = 0,
             frequency_penalty = 0,
+            stream = False,
     )
 
     def _worker(self):
         print('ChatGPT started')
+        if not os.environ.get('OPENAI_API_KEY'):
+            print('* Please create the environment variable OPENAI_API_KEY with the API key')
+            print('* See https://github.com/archibate/nvim-gpt/blob/main/README.md#for-chatgpt-users')
+            raise RuntimeError('environment variable OPENAI_API_KEY not found')
+
         import openai
 
         messages = []

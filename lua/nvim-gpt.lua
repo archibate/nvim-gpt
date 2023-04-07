@@ -1,16 +1,25 @@
 local M = {}
 
-function M.add_suggested_keymaps()
-    local _gpt_add_key_map_timer = vim.loop.new_timer()
-    _gpt_add_key_map_timer:start(100, 100, vim.schedule_wrap(function ()
-        if _gpt_add_key_map_timer and pcall(function () vim.cmd [[GPTSuggestedKeymaps]] end) then
-            _gpt_add_key_map_timer:stop()
-            _gpt_add_key_map_timer = nil
-        end
-    end))
+local function add_default_keymaps()
+    vim.cmd [[
+" <CR> input, g<CR> line, gs<CR> word, gu<CR> file
+nnoremap <CR> :GPT<Space>
+vnoremap <CR> :GPTCode<Space>
+nnoremap g<CR> :GPTWrite<Space>
+nnoremap <silent> gs<CR> <Cmd>exec ":GPT " . getline('.')<CR>
+nnoremap <silent> gy<CR> <Cmd>exec ":GPT " . expand('<cword>')<CR>
+nnoremap <silent> gu<CR> <Cmd>%GPTCode<CR>
+" to prevent this mapping interfere with quickfix selection:
+autocmd CmdwinEnter * nnoremap <CR> <CR>
+autocmd BufReadPost quickfix nnoremap <CR> <CR>
+]]
 end
 
-function M.setup()
+function M.setup(opts)
+    if not opts.no_default_keymaps then
+        add_default_keymaps()
+    end
+    M._setup_options = opts
 end
 
 return M

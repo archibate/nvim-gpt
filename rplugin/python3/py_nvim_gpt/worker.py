@@ -10,8 +10,7 @@ class IWorker:
 
     def __init__(self, model, params):
         self._answers = queue.Queue()
-        self._questions = queue.Queue(maxsize=1)
-        self._pending_questions = queue.Queue()
+        self._questions = queue.Queue()
         self._task = threading.Thread(target=self._worker)
         self._model = model
         self._params = dict(self.PARAMS)
@@ -23,14 +22,14 @@ class IWorker:
             print('try restarting worker')
             self._task = threading.Thread(target=self._worker)
             self._task.start()
-        try:
-            if not self._pending_questions.empty():
-                old_question = self._pending_questions.get_nowait()
-                self._questions.put_nowait(old_question)
-                return
-            self._questions.put_nowait(question)
-        except queue.Full:
-            self._pending_questions.put_nowait(question)
+        # try:
+            # if not self._pending_questions.empty():
+            #     old_question = self._pending_questions.get_nowait()
+            #     self._questions.put_nowait(old_question)
+            #     return
+        self._questions.put_nowait(question)
+        # except queue.Full:
+            # self._pending_questions.put_nowait(question)
 
     def try_pop_answer(self):
         try:

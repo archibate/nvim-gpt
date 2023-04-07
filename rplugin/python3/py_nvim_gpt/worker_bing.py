@@ -21,6 +21,10 @@ class Worker_BingAI(IWorker):
         import EdgeGPT
         cookies_path = '~/.bing-cookies.json'
         cookies_path = os.path.expanduser(cookies_path)
+        if not os.path.exists(cookies_path):
+            print('* Please create the file ~/.bing-cookies.json with Bing cookies')
+            print('* See https://github.com/archibate/nvim-gpt/blob/main/README.md#for-bing-ai-users')
+            raise RuntimeError('file ~/.bing-cookies.json not found')
         with open(cookies_path, 'r') as f:
             cookies = json.load(f)
         bot = EdgeGPT.Chatbot(cookies=cookies)
@@ -33,6 +37,8 @@ class Worker_BingAI(IWorker):
 
             if isinstance(question, Reset):
                 sync.function(bot.reset)
+                continue
+            if isinstance(question, Rewind):
                 continue
             elif isinstance(question, UpdateParams):
                 self._params = dict(question.params)

@@ -61,11 +61,11 @@ class Worker_RWKV(IWorker):
 # ########################################################################################################
     _MODEL_DETAILS = {
         'raven-3B': (
-            '/home/bate/Downloads/RWKV-4-Raven-3B-v6-ChnEng-20230401-ctx2048.pth',
+            'RWKV-4-Raven-3B-v6-ChnEng-20230401-ctx2048.pth',
             'cuda fp16i8 -> cuda fp16 *4',
         ),
         'raven-14B': (
-            '/home/bate/Downloads/RWKV-4-Raven-14B-v6-Eng-20230401-ctx4096.pth',
+            'RWKV-4-Raven-14B-v6-Eng-20230401-ctx4096.pth',
             'cuda fp16i8 *0+ -> cpu fp32 *1',
         ),
     }
@@ -76,12 +76,13 @@ class Worker_RWKV(IWorker):
         from rwkv.model import RWKV
         from rwkv.utils import PIPELINE, PIPELINE_ARGS
 
+        repo = os.environ['CHATRWKV_REPO']
         os.environ["RWKV_JIT_ON"] = '1'
         os.environ["RWKV_CUDA_ON"] = '1'
 
         model, strategy = self._MODEL_DETAILS[self._model]
-        model = RWKV(model=model, strategy=strategy)
-        pipeline = PIPELINE(model, "/home/bate/Codes/ChatRWKV/20B_tokenizer.json")
+        model = RWKV(model=os.path.join(repo, model), strategy=strategy)
+        pipeline = PIPELINE(model, os.path.join(repo, "20B_tokenizer.json"))
 
         print('Starting RWKV worker...')
 

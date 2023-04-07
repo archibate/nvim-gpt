@@ -1,7 +1,7 @@
 import neovim
 import contextlib
 import threading
-import random
+import inspect
 
 from .io_tags import Done, Shutdown
 from .logging import LogSystem
@@ -13,31 +13,26 @@ class GPTPlugin:
         print('GPT plugin started')
         self.nvim = nvim
 
+        self._mutex = threading.Lock()
         self._state = 'idle'  # options: idle, running
         self._cursor_counter = 0
         self._qa_count = 0
         self._stop_count = 0
         self._last_question = None
         self._last_bufnr = None
+        self._multiline_was_regenerate = None
         self._last_range = None
         self._templates = {}
 
-        self._model = 'creative'  # Bing AI creative
-        if 0:
-            self._model = 'balanced'
-        if 0:
-            self._model = 'gpt-3.5-turbo'
-        if 0:
-            self._model = 'raven-3B'
-        if 1:
-            self._model = 'repeater'
-        self._params = {}     # specific parameters like temperature depends on bot types
+        self._model = 'gpt-3.5-turbo'
+        self._params = {}
 
         self._cursors = '|/_\\'  # '_ ' for blinking '_' and ' '
         self._code_quote = '{question}\n```{filetype}\n{code}\n```'
+        self._in_language = '{question}\n(in {filetype})'
         self._question_title = '\n🙂:'
         self._answer_title = '\n🤖:'
-        self._mutex = threading.Lock()
+        self._regenerate_title = '🔄'
         self._welcome_messages = [
             "This is {}, how can I help you?",
             "Here is {}, how can I help you?",
@@ -57,6 +52,7 @@ class GPTPlugin:
             "Your true companion, {} coming!",
         ]
         self._window_width = 45
+        self._multiline_input_height = 8
         self._window_options = {
             'wrap': True,
             'list': False,
@@ -66,24 +62,62 @@ class GPTPlugin:
         }
         self._lock_last_line = 'force'    # options: none, last-char, last-line, force
         self._update_interval = 180       # milliseconds
-        self._keymap_trigger = '<CR>'
 
-    @neovim.command('GPTSuggestedKeymaps')
-    def gpt_suggested_keymaps(self):
-        if self._keymap_trigger is None:
-            return
-        from .keymaps import suggested_keymaps
-        for line in suggested_keymaps.format(trigger=self._keymap_trigger).splitlines():
-            if line:
-                self.nvim.command(line)
-        from .keymaps import suggested_templates
-        for line in suggested_templates.splitlines():
-            if line:
-                self.nvim.command(line)
+        self._take_setup_options()
+
+        if not self._templates:
+            from .keymaps import preset_templates
+            for line in preset_templates.splitlines():
+                line = line.strip()
+                if not line: continue
+                args = line.split(' ')
+                assert args[0] == 'GPTTemplate', args[0]
+                self._add_gpt_template(args[1], *args[2:])
+
+    def _take_setup_options(self):
+        opts = self.nvim.exec_lua("vim.g._gpt_setup_options = require'nvim-gpt'._setup_options")
+        opts = self.nvim.eval('g:_gpt_setup_options')
+        if opts is None:
+            raise RuntimeError("no setup options provided, please add require'nvim-gpt'._setup{} to your init.lua")
+
+        print('setup options:', opts)
+
+        update_keys = [
+            'model',
+            'params',
+            'cursors',
+            'code_quote',
+            'question_title',
+            'answer_title',
+            'regenerate_title',
+            'window_width',
+            'multiline_input_height',
+            'lock_last_line',
+            'update_interval',
+            'window_options',
+        ]
+        for k in update_keys:
+            if k in opts:
+                assert hasattr(self, '_' + k), k
+                setattr(self, '_' + k, opts[k])
+
+        welcome = opts.get('welcome_messages', 'fancy')
+        if welcome != 'fancy':
+            self._welcome_messages.clear()
+            if welcome != 'none':
+                self._welcome_messages = [welcome]
+
+        if 'question_templates' in opts:
+            for line in opts['question_templates'].splitlines():
+                line = line.strip()
+                if not line: continue
+                args = line.split(' ')
+                assert args[0] == 'GPTTemplate', args[0]
+                self._add_gpt_template(args[1], *args[2:])
 
     def get_bot(self):
         from .workers import get_worker
-        return get_worker(self._model, self._params)
+        return get_worker(self._model, self._params.get(self._model, dict()))
 
     @neovim.command('GPTModel', nargs='?')  # type: ignore
     def gpt_model(self, args):
@@ -107,7 +141,7 @@ class GPTPlugin:
     @neovim.command('GPTLog')
     def gpt_log(self):
         with self._critical_section():
-            buffer = self._try_create_window('GPTLog')
+            buffer, reused = self._create_sub_window('GPTLog', width=self._window_width)
             buffer.options['modifiable'] = True
             try:
                 buffer[:] = LogSystem.instance().read_log().split('\n')
@@ -115,27 +149,43 @@ class GPTPlugin:
                 buffer.options['modifiable'] = False
             self.nvim.command('norm! G')
 
-    def _try_create_window(self, name, location='rightbelow'):
+    def _create_sub_window(self, name, location='rightbelow', modifiable=False, width=None, height=None, filetype=None):
         bufnr = self.nvim.eval('bufnr("{}")'.format(name))
         if bufnr == -1:
             self.nvim.command('{} new'.format(location))
             buffer = self.nvim.current.buffer
+            window = self.nvim.current.window
             buffer.name = name
             buffer.options['buftype'] = 'nofile'
             buffer.options['bufhidden'] = 'wipe'
             buffer.options['swapfile'] = False
-            buffer.options['modifiable'] = False
+            buffer.options['modifiable'] = modifiable
+            if filetype:
+                buffer.options['filetype'] = filetype
+            if width:
+                window.width = width
+            if height:
+                window.height = height
+            return buffer, False
         else:
-            winnr = self.nvim.eval('bufwinnr(' + str(bufnr) + ')')
+            winnr = self.nvim.funcs.bufwinnr(bufnr)
             if winnr == -1:
                 self.nvim.command('{} split'.format(location))
                 self.nvim.command('buffer ' + str(bufnr))
+                window = self.nvim.current.window
+                if width:
+                    window.width = width
+                if height:
+                    window.height = height
             else:
+                if self.nvim.funcs.bufnr('%') == bufnr:
+                    buffer = self.nvim.buffers[bufnr]
+                    return buffer, True
                 self.nvim.command(str(winnr) + 'windo buffer')
             buffer = self.nvim.buffers[bufnr]
-        return buffer
+            return buffer, False
 
-    @neovim.command('GPT')
+    @neovim.command('GPTOpen')
     def gpt_toggle(self):
         with self._critical_section():
             self._do_gpt_open(toggle=True)
@@ -156,7 +206,11 @@ class GPTPlugin:
             for k, v in self._window_options.items():
                 window.options[k] = v
             self._set_welcome_message()
-            self._add_gpt_window_keymaps()
+            from .keymaps import gpt_window_keymaps
+            for line in gpt_window_keymaps.splitlines():
+                line = line.strip()
+                if line:
+                    self.nvim.command(line)
         elif toggle:
             winnr = self.nvim.eval('bufwinnr(' + str(bufnr) + ')')
             if winnr == -1:
@@ -174,11 +228,28 @@ class GPTPlugin:
             else:
                 self.nvim.command(str(winnr) + 'windo buffer')
 
-    def _add_gpt_window_keymaps(self):
-        from .keymaps import gpt_window_keymaps
-        for line in gpt_window_keymaps.splitlines():
-            if line:
-                self.nvim.command(line)
+    @neovim.command('GPTMultiline', nargs='*')  # type: ignore
+    def gpt_multiline(self, args):  # plan: (I)nput
+        with self._critical_section():
+            self._do_gpt_multiline(' '.join(args))
+
+    def _do_gpt_multiline(self, exist_question, regenerate=False):
+        buffer, reused = self._create_sub_window('GPTInput', modifiable=True, height=self._multiline_input_height, filetype='markdown')
+        if reused:
+            question = '\n'.join(buffer[:])
+            self.nvim.command('wincmd q')
+            self._do_gpt_open()
+            self._submit_question(question, regenerate=self._multiline_was_regenerate or False)
+            self._multiline_was_regenerate = None
+        else:
+            self._multiline_was_regenerate = regenerate
+            # if not exist_question.strip() and self._last_question:
+            #     exist_question = self._last_question
+            buffer[:] = exist_question.split('\n')
+            from .keymaps import gpt_multiline_edit_keymaps
+            for line in gpt_multiline_edit_keymaps.splitlines():
+                line = line.strip()
+                if line: self.nvim.command(line)
 
     @neovim.command('GPTDiscard')
     def gpt_discard(self):  # plan: (d)iscard
@@ -204,25 +275,39 @@ class GPTPlugin:
             self._rid_last_line_cursor()
             self._transit_state('idle')
 
-    @neovim.command('GPTInput', nargs='*')  # type: ignore
-    def gpt_input(self, args):  # plan: <Space>
+    @neovim.command('GPT', nargs='*')  # type: ignore
+    def gpt_input(self, args):  # plan: <CR> (i)nput
         with self._critical_section():
-            self._do_gpt_stop()
             question = self._compose_question(args)
+            self._do_gpt_stop()
             self._do_gpt_open()
-            if not len(question):
-                # self.nvim.command('echo "Please provide your question"')
+            if not args:
+                self._do_gpt_multiline('')
+                return
+            self._submit_question(question)
+
+    @neovim.command('GPTWrite', nargs='*', range=True)  # type: ignore
+    def gpt_write(self, args, range_):  # plan: g<CR>
+        with self._critical_section():
+            # if not self.nvim.current.buffer['modifiable']: raise
+            if range_[0] == range_[1]:
+                range_ = (range_[0], range_[0] - 1)
+            question = self._compose_question(args, range_, nocode=True)
+            self._do_gpt_stop()
+            self._do_gpt_open()
+            if not args:
+                self._do_gpt_multiline(question)
                 return
             self._submit_question(question)
 
     @neovim.command('GPTCode', nargs='*', range=True)  # type: ignore
-    def gpt_code(self, args, range_):  # plan: <Space>
+    def gpt_code(self, args, range_):  # plan: <CR> in visual
         with self._critical_section():
-            self._do_gpt_stop()
             question = self._compose_question(args, range_)
+            self._do_gpt_stop()
             self._do_gpt_open()
-            if not len(question):
-                # self.nvim.command('echo "Please provide your question"')
+            if not args:
+                self._do_gpt_multiline(question)
                 return
             self._submit_question(question)
 
@@ -247,9 +332,9 @@ class GPTPlugin:
     def _join_args(self, args):
         return ' '.join(self._try_replace_template(a) for a in args)
 
-    @neovim.command('GPTRegenerate', nargs='*')  # type: ignore
-    def gpt_regenerate(self, args):  # plan: (r)egenerate
-        additional_question = self._join_args(args)
+    @neovim.command('GPTRegenerate', nargs='*', bang=True)  # type: ignore
+    def gpt_regenerate(self, args, bang):  # plan: (r)egenerate
+        additional_description = self._join_args(args)
         with self._critical_section():
             self._do_gpt_stop()
             if self._last_question is None:
@@ -257,11 +342,16 @@ class GPTPlugin:
                 return
             self._do_gpt_open()
             question = self._last_question
-            if additional_question:
-                question += '\n' + additional_question
-            self._submit_question(question, regenerate=True)
+            if additional_description:
+                question += '\n' + additional_description
+            if bang:
+                self._do_gpt_multiline(question, regenerate=True)
+            else:
+                self._submit_question(question, regenerate=True)
 
     def _submit_question(self, question, regenerate=False):
+        if not len(question.strip()):
+            return
         # if not regenerate:
         self._qa_count += 1
         #     qa_count = self._qa_count
@@ -270,6 +360,8 @@ class GPTPlugin:
         self._last_question = question
         question_ml = question.split('\n')
         question_ml = self._question_title.split('\n') + question_ml
+        if regenerate:
+            question_ml += self._regenerate_title.split('\n')
         question_ml += self._answer_title.split('\n')
         if len(self._cursors):
             self._cursor_counter = 0
@@ -295,13 +387,20 @@ class GPTPlugin:
             if self._last_bufnr is None or self._last_range is None:
                 self.nvim.command('echo "no last range operation"')
                 return
-            buffer = self.nvim.buffers[self._last_bufnr]
+            try:
+                buffer = self.nvim.buffers[self._last_bufnr]
+            except Exception:
+                self.nvim.command('echo "buffer to edit ({}) is closed"'.format(self._last_bufnr))
+                return
             if not buffer.options['modifiable']:
                 self.nvim.command('echo "buffer not modifiable"')
                 return
             buffer[self._last_range[0]-1:self._last_range[1]] = answer
-            self._last_bufnr = None
-            self._last_range = None
+            if answer:
+                self._last_range = (self._last_range[0], self._last_range[0] + len(answer) - 1)
+            else:
+                self._last_bufnr = None
+                self._last_range = None
 
     @neovim.command('GPTYank', bang=True)
     def gpt_yank(self, bang):
@@ -319,7 +418,7 @@ class GPTPlugin:
         answer, _ = self._fetch_maybe_quoted_answer()
         answer = '\n'.join(answer)
         # execute python expressions directly in rplugin process
-        exec(compile(answer, '<GPTExecute>', 'exec'))
+        # exec(compile(answer, '<GPTExecute>', 'exec'))
 
     @neovim.command('GPTSync')
     def gpt_sync(self):
@@ -347,8 +446,10 @@ class GPTPlugin:
                     self._transit_state('idle')
                     return
                 if isinstance(answer, Shutdown):  # shutdown means worker thread crashed
-                    self._append_last_line(full_answer + '\n**GPT WORKER CRASHED** -'
-                                           + ' see :GPTLog for more details\n')
+                    full_answer += '\n**GPT WORKER CRASHED**:\n```\n'
+                    full_answer += '\n'.join(LogSystem.instance().read_log().splitlines()[-6:])
+                    full_answer += '\n```\nSee :GPTLog for more details.\n'
+                    self._append_last_line(full_answer)
                     self._rid_last_line_cursor()
                     self._transit_state('idle')
                     return
@@ -429,8 +530,9 @@ class GPTPlugin:
         return self.nvim.buffers[bufnr]
 
     @contextlib.contextmanager
-    def _modifiable_buffer(self):
-        buffer = self._get_buffer()
+    def _modifiable_buffer(self, buffer=None):
+        if buffer is None:
+            buffer = self._get_buffer()
         buffer.options['modifiable'] = True
         try:
             yield buffer
@@ -454,18 +556,18 @@ class GPTPlugin:
                 in_quotes = not in_quotes
                 has_quotes = True
                 continue
+            if line.startswith(question_title_prefix):
+                in_answer = False
+                continue
+            if line.startswith(answer_title_prefix):
+                has_quotes = False
+                in_answer = True
+                has_colon = False
+                full_answer.clear()
+                quoted_answer.clear()
+                coloned_answer.clear()
+                continue
             if not in_quotes:
-                if line.startswith(question_title_prefix):
-                    in_answer = False
-                    continue
-                if line.startswith(answer_title_prefix):
-                    has_quotes = False
-                    in_answer = True
-                    has_colon = False
-                    full_answer.clear()
-                    quoted_answer.clear()
-                    coloned_answer.clear()
-                    continue
                 if line.endswith(':'):
                     has_colon = True
             if in_answer:
@@ -497,34 +599,48 @@ class GPTPlugin:
             filetype = ''
         return filetype
 
-    def _compose_question(self, args, range_=None):
+    def _compose_question(self, args, range_=None, nocode=False):
         question = self._join_args(args)
         curr_bufnr = self.nvim.funcs.bufnr('%')
         if curr_bufnr != self.nvim.funcs.bufnr('GPTWin'):
             self._last_bufnr = curr_bufnr
             self._last_range = range_ and tuple(range_) or None
         if range_ is not None:
-            buffer = self.nvim.current.buffer
-            code = '\n'.join(buffer[range_[0]-1:range_[1]])
-            if '{filetype}' in self._code_quote:
-                question = self._code_quote.format(question=question, code=code, filetype=self._determine_range_filetype(range_))
+            buffer_section = self.nvim.current.buffer[range_[0]-1:range_[1]]
+            code = '\n'.join(buffer_section) if not nocode else ''
+            if '{filetype}' in self._code_quote or '{filetype}' in self._in_language:
+                filetype = self._determine_range_filetype(range_)
             else:
-                question = self._code_quote.format(question=question, code=code)
+                filetype = ''
+            if not len(code.strip()):
+
+                if filetype:
+                    question = self._in_language.format(question=question, filetype=filetype)
+            else:
+                question = self._code_quote.format(question=question, code=code, filetype=filetype)
         return question.strip()
 
     def _set_welcome_message(self):
         # from .workers import model_worker_type
         bot_name = self._model # model_worker_type(self._model)
-        self._set_buffer([random.choice(self._welcome_messages).format(bot_name)])
+        if len(self._welcome_messages) == 1:
+            self._set_buffer([self._welcome_messages[0].format(bot_name)])
+        elif len(self._welcome_messages) > 2:
+            import random
+            self._set_buffer([random.choice(self._welcome_messages).format(bot_name)])
+        else:
+            self._set_buffer([])
         self._lock_cursor_to_end()
 
     @contextlib.contextmanager
     def _critical_section(self):
         if not self._mutex.acquire(timeout=2.5):
-            raise RuntimeError('mutex acquire failed')
+            raise RuntimeError('mutex acquire failed, last entry: {}'.format(self._last_entry_func))
+        self._last_entry_func = inspect.stack()[2].function
         try:
             yield
         finally:
+            self._last_entry_func = None
             self._mutex.release()
 
 
