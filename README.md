@@ -53,7 +53,7 @@ It's suggested to use [packer.nvim](https://github.com/wbthomason/packer.nvim) t
 ```lua
 use({
     'archibate/nvim-gpt',
-    -- optional for supporting ':Telescope gpt_models' and ':Telescope gpt_templates' commands (TBD)
+    -- optional for supporting ':Telescope gpt_models' and ':Telescope gpt_inputs' commands (TBD)
     requires = { 'nvim-telescope/telescope.nvim' },
     config = function()
         require'nvim-gpt'.setup {
@@ -123,9 +123,6 @@ nnoremap g<CR> :GPTWrite<Space>
 nnoremap <silent> gs<CR> <Cmd>exec ":GPT " . getline('.')<CR>
 nnoremap <silent> gy<CR> <Cmd>exec ":GPT " . expand('<cword>')<CR>
 nnoremap <silent> gu<CR> <Cmd>%GPTCode<CR>
-" to prevent this mapping interfere with quickfix selection:
-autocmd CmdwinEnter * nnoremap <CR> <CR>
-autocmd BufReadPost quickfix nnoremap <CR> <CR>
 ```
 
 Can be disabled by `no_default_keymaps = true` option in setup.

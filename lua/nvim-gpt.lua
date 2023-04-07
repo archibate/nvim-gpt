@@ -10,8 +10,8 @@ nnoremap <silent> gs<CR> <Cmd>exec ":GPT " . getline('.')<CR>
 nnoremap <silent> gy<CR> <Cmd>exec ":GPT " . expand('<cword>')<CR>
 nnoremap <silent> gu<CR> <Cmd>%GPTCode<CR>
 " to prevent this mapping interfere with quickfix selection:
-autocmd CmdwinEnter * nnoremap <CR> <CR>
-autocmd BufReadPost quickfix nnoremap <CR> <CR>
+" autocmd CmdwinEnter * nnoremap <CR> <CR>
+" autocmd BufReadPost quickfix nnoremap <CR> <CR>
 ]]
 end
 

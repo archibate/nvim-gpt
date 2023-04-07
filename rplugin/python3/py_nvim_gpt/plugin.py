@@ -55,6 +55,7 @@ class GPTPlugin:
         self._multiline_input_height = 8
         self._window_options = {
             'wrap': True,
+            'signcolumn': 'no',
             'list': False,
             'cursorline': True,
             'number': False,
@@ -141,7 +142,7 @@ class GPTPlugin:
     @neovim.command('GPTLog')
     def gpt_log(self):
         with self._critical_section():
-            buffer, reused = self._create_sub_window('GPTLog', width=self._window_width)
+            buffer, _ = self._create_sub_window('GPTLog', width=self._window_width)
             buffer.options['modifiable'] = True
             try:
                 buffer[:] = LogSystem.instance().read_log().split('\n')
@@ -149,7 +150,7 @@ class GPTPlugin:
                 buffer.options['modifiable'] = False
             self.nvim.command('norm! G')
 
-    def _create_sub_window(self, name, location='rightbelow', modifiable=False, width=None, height=None, filetype=None):
+    def _create_sub_window(self, name, location='belowright', modifiable=False, width=None, height=None, filetype=None, bufhidden='wipe'):
         bufnr = self.nvim.eval('bufnr("{}")'.format(name))
         if bufnr == -1:
             self.nvim.command('{} new'.format(location))
@@ -157,7 +158,7 @@ class GPTPlugin:
             window = self.nvim.current.window
             buffer.name = name
             buffer.options['buftype'] = 'nofile'
-            buffer.options['bufhidden'] = 'wipe'
+            buffer.options['bufhidden'] = bufhidden
             buffer.options['swapfile'] = False
             buffer.options['modifiable'] = modifiable
             if filetype:
@@ -191,12 +192,12 @@ class GPTPlugin:
             self._do_gpt_open(toggle=True)
 
     def _do_gpt_open(self, toggle=False):
-        bufnr = self.nvim.eval('bufnr("GPTWin")')
+        bufnr = self.nvim.eval('bufnr("GPT")')
         if bufnr == -1:
             self.nvim.command('rightbelow vnew')
             buffer = self.nvim.current.buffer
             window = self.nvim.current.window
-            buffer.name = 'GPTWin'
+            buffer.name = 'GPT'
             buffer.options['buftype'] = 'nofile'
             buffer.options['filetype'] = 'markdown'
             buffer.options['bufhidden'] = 'hide'
@@ -234,7 +235,7 @@ class GPTPlugin:
             self._do_gpt_multiline(' '.join(args))
 
     def _do_gpt_multiline(self, exist_question, regenerate=False):
-        buffer, reused = self._create_sub_window('GPTInput', modifiable=True, height=self._multiline_input_height, filetype='markdown')
+        buffer, reused = self._create_sub_window('GPTInput', modifiable=True, height=self._multiline_input_height, filetype='markdown', bufhidden='hide')
         if reused:
             question = '\n'.join(buffer[:])
             self.nvim.command('wincmd q')
@@ -245,9 +246,11 @@ class GPTPlugin:
             self._multiline_was_regenerate = regenerate
             # if not exist_question.strip() and self._last_question:
             #     exist_question = self._last_question
-            buffer[:] = exist_question.split('\n')
+            if exist_question.strip():
+                buffer[:] = exist_question.split('\n')
             from .keymaps import gpt_multiline_edit_keymaps
-            for line in gpt_multiline_edit_keymaps.splitlines():
+            bufnr = self.nvim.funcs.bufnr('%')
+            for line in gpt_multiline_edit_keymaps.format(bufnr=bufnr).splitlines():
                 line = line.strip()
                 if line: self.nvim.command(line)
 
@@ -423,7 +426,7 @@ class GPTPlugin:
     @neovim.command('GPTSync')
     def gpt_sync(self):
         with self._critical_section():
-            bufnr = self.nvim.funcs.bufnr('GPTWin')
+            bufnr = self.nvim.funcs.bufnr('GPT')
             if bufnr == -1:
                 return
             if bufnr == self.nvim.funcs.bufnr('%'):
@@ -495,7 +498,7 @@ class GPTPlugin:
         self._lock_cursor_to_end()
 
     def _lock_cursor_to_end(self):
-        if self.nvim.funcs.bufnr('%') != self.nvim.funcs.bufnr('GPTWin'):
+        if self.nvim.funcs.bufnr('%') != self.nvim.funcs.bufnr('GPT'):
             return
         if self._lock_last_line != 'force':
             if self._lock_last_line in ('last-char', 'last-line'):
@@ -524,7 +527,7 @@ class GPTPlugin:
             buffer[:] = lines
 
     def _get_buffer(self):
-        bufnr = self.nvim.eval('bufnr("GPTWin")')
+        bufnr = self.nvim.eval('bufnr("GPT")')
         if bufnr == -1:
             raise RuntimeError('GPT window not open, please :GPTOpen first')
         return self.nvim.buffers[bufnr]
@@ -602,9 +605,9 @@ class GPTPlugin:
     def _compose_question(self, args, range_=None, nocode=False):
         question = self._join_args(args)
         curr_bufnr = self.nvim.funcs.bufnr('%')
-        if curr_bufnr != self.nvim.funcs.bufnr('GPTWin'):
+        if range_ and curr_bufnr != self.nvim.funcs.bufnr('GPT'):
             self._last_bufnr = curr_bufnr
-            self._last_range = range_ and tuple(range_) or None
+            self._last_range = tuple(range_)
         if range_ is not None:
             buffer_section = self.nvim.current.buffer[range_[0]-1:range_[1]]
             code = '\n'.join(buffer_section) if not nocode else ''

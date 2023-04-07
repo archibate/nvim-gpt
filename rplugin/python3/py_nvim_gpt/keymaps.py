@@ -17,6 +17,7 @@ gpt_multiline_edit_keymaps = '''
 nnoremap <buffer><silent> <CR> <Cmd>GPTMultiline<CR>
 nnoremap <buffer><silent> q <Cmd>wincmd q<CR>
 nnoremap <buffer><silent> <Esc> <Cmd>wincmd q<CR>
+autocmd BufLeave <buffer={bufnr}> exec bufwinnr({bufnr}) == -1 ? "" : bufwinnr({bufnr}) . "wincmd q"
 '''
 
 preset_templates = '''
