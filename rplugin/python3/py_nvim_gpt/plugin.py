@@ -9,6 +9,8 @@ from .logging import LogSystem
 
 @neovim.plugin
 class GPTPlugin:
+    nvim: neovim.Nvim
+
     def __init__(self, nvim):
         print('GPT plugin started')
         self.nvim = nvim
@@ -21,6 +23,7 @@ class GPTPlugin:
         self._last_question = None
         self._last_bufnr = None
         self._multiline_was_regenerate = None
+        self._multiline_submitted = False
         self._last_range = None
         self._templates = {}
 
@@ -60,6 +63,7 @@ class GPTPlugin:
             'cursorline': True,
             'number': False,
             'relativenumber': False,
+            # 'virtualedit': 'onemore',
         }
         self._lock_last_line = 'force'    # options: none, last-char, last-line, force
         self._update_interval = 180       # milliseconds
@@ -145,7 +149,7 @@ class GPTPlugin:
             buffer, _ = self._create_sub_window('GPTLog', width=self._window_width)
             buffer.options['modifiable'] = True
             try:
-                buffer[:] = LogSystem.instance().read_log().split('\n')
+                buffer[:] = LogSystem.instance().read_log().splitlines()
             finally:
                 buffer.options['modifiable'] = False
             self.nvim.command('norm! G')
@@ -241,6 +245,7 @@ class GPTPlugin:
             self.nvim.command('wincmd q')
             self._do_gpt_open()
             self._submit_question(question, regenerate=self._multiline_was_regenerate or False)
+            self._multiline_submitted = True
             self._multiline_was_regenerate = None
         else:
             self._multiline_was_regenerate = regenerate
@@ -248,11 +253,23 @@ class GPTPlugin:
             #     exist_question = self._last_question
             if exist_question.strip():
                 buffer[:] = exist_question.split('\n')
+            elif self._multiline_submitted:
+                self._multiline_submitted = False
+                buffer[:] = []
             from .keymaps import gpt_multiline_edit_keymaps
             bufnr = self.nvim.funcs.bufnr('%')
             for line in gpt_multiline_edit_keymaps.format(bufnr=bufnr).splitlines():
                 line = line.strip()
                 if line: self.nvim.command(line)
+            # print('nimadir', dir(self.nvim))
+            if len(buffer[0]):
+                self.nvim.command('stopinsert')
+                if not regenerate:
+                    self.nvim.feedkeys('gH', 'n')
+            else:
+                self.nvim.command('startinsert')
+            if self.nvim.funcs.exists('b:_no_enter_submit'):
+                self.nvim.command('unlet b:_no_enter_submit')
 
     @neovim.command('GPTDiscard')
     def gpt_discard(self):  # plan: (d)iscard
@@ -392,7 +409,7 @@ class GPTPlugin:
                 return
             try:
                 buffer = self.nvim.buffers[self._last_bufnr]
-            except Exception:
+            except neovim.NvimError:
                 self.nvim.command('echo "buffer to edit ({}) is closed"'.format(self._last_bufnr))
                 return
             if not buffer.options['modifiable']:
@@ -621,7 +638,7 @@ class GPTPlugin:
                     question = self._in_language.format(question=question, filetype=filetype)
             else:
                 question = self._code_quote.format(question=question, code=code, filetype=filetype)
-        return question.strip()
+        return question #.strip()
 
     def _set_welcome_message(self):
         # from .workers import model_worker_type

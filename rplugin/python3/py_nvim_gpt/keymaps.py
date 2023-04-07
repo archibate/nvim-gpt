@@ -1,11 +1,9 @@
 gpt_window_keymaps = '''
 " (i)nput (a)ccept (r)egenerate (d)iscard e(x)ecute (s)top (q)uit
-nnoremap <buffer> i :GPT<Space>
-nnoremap <buffer><silent> I :GPTMultiline<CR>
+nnoremap <buffer><silent> i <Cmd>GPT<CR>
 nnoremap <buffer><silent> a <Cmd>GPTAccept<CR>
 nnoremap <buffer><silent> A <Cmd>GPTAccept!<CR>
-nnoremap <buffer><silent> r <Cmd>GPTRegenerate<CR>
-nnoremap <buffer><silent> R <Cmd>GPTRegenerate!<CR>
+nnoremap <buffer><silent> r <Cmd>GPTRegenerate!<CR>
 nnoremap <buffer><silent> dd <Cmd>GPTDiscard<CR>
 nnoremap <buffer><silent> x <Cmd>GPTExecute<CR>
 nnoremap <buffer><silent> s <Cmd>GPTStop<CR>
@@ -15,8 +13,13 @@ nnoremap <buffer><silent> <Esc> <Cmd>wincmd q<CR>
 
 gpt_multiline_edit_keymaps = '''
 nnoremap <buffer><silent> <CR> <Cmd>GPTMultiline<CR>
+inoremap <expr><buffer><silent> <CR> (!exists('b:_no_enter_submit') ? '<Esc><Cmd>GPTMultiline<CR>' : '<CR>')
+snoremap <expr><buffer><silent> <CR> (!exists('b:_no_enter_submit') ? '<Esc><Cmd>GPTMultiline<CR>' : '<CR>')
+inoremap <buffer><silent> <Esc> <Esc><Cmd>let b:_no_enter_submit = 1<CR>
+snoremap <buffer><silent> <Esc> <Esc><Cmd>let b:_no_enter_submit = 1<CR>
 nnoremap <buffer><silent> q <Cmd>wincmd q<CR>
 nnoremap <buffer><silent> <Esc> <Cmd>wincmd q<CR>
+autocmd BufEnter <buffer={bufnr}> norm! $
 autocmd BufLeave <buffer={bufnr}> exec bufwinnr({bufnr}) == -1 ? "" : bufwinnr({bufnr}) . "wincmd q"
 '''
 

@@ -3,9 +3,9 @@ local M = {}
 local function add_default_keymaps()
     vim.cmd [[
 " <CR> input, g<CR> line, gs<CR> word, gu<CR> file
-nnoremap <CR> :GPT<Space>
-vnoremap <CR> :GPTCode<Space>
-nnoremap g<CR> :GPTWrite<Space>
+nnoremap <silent> <CR> <Cmd>GPT<CR>
+vnoremap <silent> <CR> <Cmd>GPTCode<CR>
+nnoremap <silent> g<CR> <Cmd>GPTWrite<CR>
 nnoremap <silent> gs<CR> <Cmd>exec ":GPT " . getline('.')<CR>
 nnoremap <silent> gy<CR> <Cmd>exec ":GPT " . expand('<cword>')<CR>
 nnoremap <silent> gu<CR> <Cmd>%GPTCode<CR>
