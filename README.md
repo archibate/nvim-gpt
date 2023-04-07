@@ -42,7 +42,7 @@ In the GPT window:
 
 ## Multi-backend support
 
-You may use `:GPTModel <model_name>` to switch to another model, e.g. `:GPTModel creative` to switch to the Bing AI - 'creative'. The default model is 'gpt-3.5-turbo', which can be tweaked in setup options, see below.
+You may use `:GPTModel <model_name>` to switch to another model, e.g. `:GPTModel creative` to switch to the Bing AI - 'creative'. The default model is `gpt-3.5-turbo`, which can be tweaked in setup options, see below.
 
 If you have [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim), use `:Telescope gpt_models` to show a list of all GPT models to select from.
 
@@ -115,13 +115,13 @@ Then enter nvim and `:GPTModel googlesearch-python`. Now search current word wit
 
 ## Keymaps
 
-There are keymaps applied **by default** when loading this plugin. See [keymaps.py](rplugin/python3/py_nvim_gpt/keymaps.py):
+There are keymaps applied **by default** when loading this plugin. See [nvim-gpt.lua](lua/nvim-gpt.lua) and [keymaps.py](rplugin/python3/py_nvim_gpt/keymaps.py):
 
 ```vim
 " <CR> input, g<CR> line, gs<CR> word, gu<CR> file
-nnoremap <CR> :GPT<Space>
-vnoremap <CR> :GPTCode<Space>
-nnoremap g<CR> :GPTWrite<Space>
+nnoremap <silent> <CR> <Cmd>GPT<CR>
+vnoremap <silent> <CR> <Cmd>GPTCode<CR>
+nnoremap <silent> g<CR> <Cmd>GPTWrite<CR>
 nnoremap <silent> gs<CR> <Cmd>exec ":GPT " . getline('.')<CR>
 nnoremap <silent> gy<CR> <Cmd>exec ":GPT " . expand('<cword>')<CR>
 nnoremap <silent> gu<CR> <Cmd>%GPTCode<CR>
