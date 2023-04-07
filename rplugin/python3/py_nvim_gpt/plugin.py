@@ -155,7 +155,7 @@ class GPTPlugin:
             self.nvim.command('norm! G')
 
     def _create_sub_window(self, name, location='belowright', modifiable=False, width=None, height=None, filetype=None, bufhidden='wipe'):
-        bufnr = self.nvim.eval('bufnr("{}")'.format(name))
+        bufnr = self.nvim.funcs.bufnr(name)
         if bufnr == -1:
             self.nvim.command('{} new'.format(location))
             buffer = self.nvim.current.buffer
@@ -191,12 +191,27 @@ class GPTPlugin:
             return buffer, False
 
     @neovim.command('GPTOpen')
+    def gpt_open(self):
+        with self._critical_section():
+            self._do_gpt_open()
+
+    @neovim.command('GPTClose')
+    def gpt_close(self):
+        with self._critical_section():
+            for name in ('GPT', 'GPTInput', 'GPTLog'):
+                bufnr = self.nvim.funcs.bufnr(name)
+                if bufnr != -1:
+                    winnr = self.nvim.funcs.bufwinnr(bufnr)
+                    if winnr != -1:
+                        self.nvim.command(str(winnr) + 'wincmd q')
+
+    @neovim.command('GPTToggle')
     def gpt_toggle(self):
         with self._critical_section():
             self._do_gpt_open(toggle=True)
 
     def _do_gpt_open(self, toggle=False):
-        bufnr = self.nvim.eval('bufnr("GPT")')
+        bufnr = self.nvim.funcs.bufnr("GPT")
         if bufnr == -1:
             self.nvim.command('rightbelow vnew')
             buffer = self.nvim.current.buffer
@@ -217,15 +232,14 @@ class GPTPlugin:
                 if line:
                     self.nvim.command(line)
         elif toggle:
-            winnr = self.nvim.eval('bufwinnr(' + str(bufnr) + ')')
+            winnr = self.nvim.funcs.bufwinnr(bufnr)
             if winnr == -1:
                 self.nvim.command('rightbelow vsplit')
                 self.nvim.command('buffer ' + str(bufnr))
             else:
-                winnr = self.nvim.eval('bufwinnr(' + str(bufnr) + ')')
                 self.nvim.command(str(winnr) + 'wincmd q')
         else:
-            winnr = self.nvim.eval('bufwinnr(' + str(bufnr) + ')')
+            winnr = self.nvim.funcs.bufwinnr(bufnr)
             if winnr == -1:
                 self.nvim.command('rightbelow vsplit')
                 self.nvim.command('buffer ' + str(bufnr))
@@ -544,7 +558,7 @@ class GPTPlugin:
             buffer[:] = lines
 
     def _get_buffer(self):
-        bufnr = self.nvim.eval('bufnr("GPT")')
+        bufnr = self.nvim.funcs.bufnr("GPT")
         if bufnr == -1:
             raise RuntimeError('GPT window not open, please :GPTOpen first')
         return self.nvim.buffers[bufnr]
