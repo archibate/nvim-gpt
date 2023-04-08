@@ -25,7 +25,7 @@ class Worker_BingAI(IWorker):
         if not os.path.exists(cookies_path):
             print('* Please create the file ~/.bing-cookies.json with Bing cookies')
             print('* See https://github.com/archibate/nvim-gpt/blob/main/README.md#for-bing-ai-users')
-            raise RuntimeError('file ~/.bing-cookies.json not found')
+            raise RuntimeError('file ~/.bing-cookies.json not found (please follow instructions in https://github.com/archibate/nvim-gpt/blob/main/README.md#for-bing-ai-users)')
         with open(cookies_path, 'r') as f:
             cookies = json.load(f)
         bot = EdgeGPT.Chatbot(cookies=cookies)

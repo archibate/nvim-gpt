@@ -136,11 +136,15 @@ class GPTPlugin:
                 curr_index = avail_models.index(self._model)
                 delta = -1 if model == 'prev' else 1
                 self._model = avail_models[(curr_index + delta) % len(avail_models)]
-                return
-            if model not in avail_models:
+            elif model not in avail_models:
                 self.nvim.command('echo "no such model {}"'.format(model))
                 return
+            self._do_gpt_stop()
+            self._qa_count = 0
             self._model = model
+            bufnr = self.nvim.funcs.bufnr("GPT")
+            if bufnr != -1:
+                self._set_welcome_message()
 
     @neovim.command('GPTLog', sync=True)
     def gpt_log(self):
@@ -251,12 +255,12 @@ class GPTPlugin:
                 self.nvim.command(str(winnr) + 'windo buffer')
         return neo
 
-    @neovim.command('GPTMultiline', nargs='*', sync=True)  # type: ignore
-    def gpt_multiline(self, args):  # plan: (I)nput
+    @neovim.command('GPTQuestion', nargs='*', sync=True)  # type: ignore
+    def gpt_question(self, args):  # plan: (I)nput
         with self._critical_section():
-            self._do_gpt_multiline(' '.join(args))
+            self._do_gpt_question(' '.join(args))
 
-    def _do_gpt_multiline(self, exist_question, regenerate=False, clear=False, neo=False):
+    def _do_gpt_question(self, exist_question, regenerate=False, clear=False, neo=False):
         buffer, reused = self._create_sub_window('GPTInput', modifiable=True, height=self._multiline_input_height, filetype='markdown', bufhidden='hide')
         if reused:
             question = '\n'.join(buffer[:])
@@ -277,8 +281,8 @@ class GPTPlugin:
                 buffer[:] = []
             if clear and neo:
                 buffer[:] = []
-            from .keymaps import gpt_multiline_edit_keymaps
-            for line in gpt_multiline_edit_keymaps.splitlines():
+            from .keymaps import gpt_question_edit_keymaps
+            for line in gpt_question_edit_keymaps.splitlines():
                 line = line.strip()
                 if line: self.nvim.command(line)
             # print('nimadir', dir(self.nvim))
@@ -321,7 +325,7 @@ class GPTPlugin:
             question = self._compose_question(args)
             neo = self._do_gpt_open()
             if not args:
-                self._do_gpt_multiline('', clear=bang, neo=neo)
+                self._do_gpt_question('', clear=bang, neo=neo)
                 return
             self._do_gpt_stop()
             self._submit_question(question)
@@ -335,7 +339,7 @@ class GPTPlugin:
             question = self._compose_question(args, range_, nocode=True)
             self._do_gpt_open()
             if not args:
-                self._do_gpt_multiline(question)
+                self._do_gpt_question(question)
                 return
             self._do_gpt_stop()
             self._submit_question(question)
@@ -346,7 +350,7 @@ class GPTPlugin:
             question = self._compose_question(args, range_)
             self._do_gpt_open()
             if not args:
-                self._do_gpt_multiline(question)
+                self._do_gpt_question(question)
                 return
             self._do_gpt_stop()
             self._submit_question(question)
@@ -368,7 +372,7 @@ class GPTPlugin:
             if additional_description:
                 question += '\n' + additional_description
             if bang:
-                self._do_gpt_multiline(question, regenerate=True)
+                self._do_gpt_question(question, regenerate=True)
             else:
                 self._do_gpt_stop()
                 self._submit_question(question, regenerate=True)

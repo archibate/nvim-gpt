@@ -23,7 +23,7 @@ class Worker_ChatGPT(IWorker):
         if not os.environ.get('OPENAI_API_KEY'):
             print('* Please create the environment variable OPENAI_API_KEY with the API key')
             print('* See https://github.com/archibate/nvim-gpt/blob/main/README.md#for-chatgpt-users')
-            raise RuntimeError('environment variable OPENAI_API_KEY not found')
+            raise RuntimeError('environment variable OPENAI_API_KEY not found (please follow instructions in https://github.com/archibate/nvim-gpt/blob/main/README.md#for-chatgpt-users)')
 
         import openai
 
@@ -66,7 +66,7 @@ class Worker_ChatGPT(IWorker):
                 else:
                     response = choices[0].message.content
                 print(response)
-                messages.append(response)
+                messages.append({'role': 'assistant', 'content': response})
                 self._answers.put(response)
                 self._answers.put(Done())
             else:

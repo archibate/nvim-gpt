@@ -157,14 +157,14 @@ nnoremap <buffer><silent> <Esc> <Cmd>wincmd q<CR>
 ### 😍 Question editing buffer keymaps
 
 ```vim
-nnoremap <buffer><silent> <CR> <Cmd>GPTMultiline<CR>
-vnoremap <buffer><silent> <CR> <Cmd><C-u>GPTMultiline<CR>
+nnoremap <buffer><silent> <CR> <Cmd>GPTQuestion<CR>
+vnoremap <buffer><silent> <CR> <Cmd><C-u>GPTQuestion<CR>
 inoremap <buffer><silent> @<CR> <Cmd>Telescope nvim-gpt gpt_template initial_mode=insert<CR>
 inoremap <buffer><silent> g<CR> <Cmd>Telescope nvim-gpt gpt_history<CR>
 snoremap <buffer><silent> @<CR> <Cmd>Telescope nvim-gpt gpt_template initial_mode=insert<CR>
 snoremap <buffer><silent> g<CR> <Cmd>Telescope nvim-gpt gpt_history<CR>
-inoremap <expr><buffer><silent> <CR> (!exists('b:_no_enter_submit') ? '<Esc><Cmd>GPTMultiline<CR>' : '<CR>')
-snoremap <expr><buffer><silent> <CR> (!exists('b:_no_enter_submit') ? '<Esc><Cmd>GPTMultiline<CR>' : '<CR>')
+inoremap <expr><buffer><silent> <CR> (!exists('b:_no_enter_submit') ? '<Esc><Cmd>GPTQuestion<CR>' : '<CR>')
+snoremap <expr><buffer><silent> <CR> (!exists('b:_no_enter_submit') ? '<Esc><Cmd>GPTQuestion<CR>' : '<CR>')
 inoremap <buffer><silent> <Esc> <Esc><Cmd>let b:_no_enter_submit = 1<CR>
 snoremap <buffer><silent> <Esc> <Esc><Cmd>let b:_no_enter_submit = 1<CR>
 nnoremap <buffer><silent> q <Cmd>wincmd q<CR>

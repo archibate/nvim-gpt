@@ -3,12 +3,12 @@ local M = {}
 local function add_default_keymaps()
     vim.cmd [[
 nnoremap <silent> <CR> <Cmd>GPT<CR>
-vnoremap <silent> <CR> <Cmd>GPTCode<CR>
+vnoremap <silent> <CR> :GPTCode<CR>
 nnoremap <silent> g<CR> <Cmd>GPTWrite<CR>
 nnoremap <silent> @<CR> <Cmd>Telescope nvim-gpt gpt_template initial_mode=insert<CR>
 nnoremap <silent> g@<CR> <Cmd>Telescope nvim-gpt gpt_history<CR>
-vnoremap <silent> @<CR> <Cmd>GPTCode<CR><Cmd>Telescope nvim-gpt gpt_template initial_mode=insert<CR>
-vnoremap <silent> g@<CR> <Cmd>GPTCode<CR><Cmd>Telescope nvim-gpt gpt_history<CR>
+vnoremap <silent> @<CR> :GPTCode<CR><Cmd>Telescope nvim-gpt gpt_template initial_mode=insert<CR>
+vnoremap <silent> g@<CR> :GPTCode<CR><Cmd>Telescope nvim-gpt gpt_history<CR>
 nnoremap <silent> gs<CR> <Cmd>exec ":GPT " . getline('.')<CR>
 nnoremap <silent> gy<CR> <Cmd>exec ":GPT " . expand('<cword>')<CR>
 nnoremap <silent> gu<CR> <Cmd>%GPTCode<CR>
