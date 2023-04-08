@@ -5,9 +5,14 @@ local function add_default_keymaps()
 nnoremap <silent> <CR> <Cmd>GPT<CR>
 vnoremap <silent> <CR> <Cmd>GPTCode<CR>
 nnoremap <silent> g<CR> <Cmd>GPTWrite<CR>
+nnoremap <silent> @<CR> <Cmd>Telescope nvim-gpt gpt_template initial_mode=insert<CR>
+nnoremap <silent> g@<CR> <Cmd>Telescope nvim-gpt gpt_history<CR>
+vnoremap <silent> @<CR> <Cmd>GPTCode<CR><Cmd>Telescope nvim-gpt gpt_template initial_mode=insert<CR>
+vnoremap <silent> g@<CR> <Cmd>GPTCode<CR><Cmd>Telescope nvim-gpt gpt_history<CR>
 nnoremap <silent> gs<CR> <Cmd>exec ":GPT " . getline('.')<CR>
 nnoremap <silent> gy<CR> <Cmd>exec ":GPT " . expand('<cword>')<CR>
 nnoremap <silent> gu<CR> <Cmd>%GPTCode<CR>
+nnoremap <silent> gsm<CR> <Cmd>Telescope nvim-gpt gpt_model<CR>
 " to prevent this mapping interfere with quickfix selection:
 " autocmd CmdwinEnter * nnoremap <CR> <CR>
 " autocmd BufReadPost quickfix nnoremap <CR> <CR>

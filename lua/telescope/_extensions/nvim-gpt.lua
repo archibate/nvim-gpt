@@ -54,23 +54,18 @@ return require'telescope'.register_extension {
         gpt_template = function(opts)
             opts = opts or {}
             local templates = nvim_gpt.get_template_list()
-            local template_vals = {}
-            for _, kv in ipairs(templates) do
-                table.insert(template_vals, "@" .. kv[1] .. ": " .. kv[2])
-            end
             pickers.new(opts, {
                 prompt_title = "GPTTemplate",
                 finder = finders.new_table {
-                    results = template_vals,
+                    results = templates,
                 },
                 sorter = conf.generic_sorter(opts),
                 attach_mappings = function(prompt_bufnr, map)
                     actions.select_default:replace(function()
                         actions.close(prompt_bufnr)
                         local selection = action_state.get_selected_entry()
-                        vim.cmd("GPT")
-                        local match = string.gmatch(selection[1], [[@[%w,]+:(.*)]])()
-                        vim.api.nvim_put({ match }, "", false, true)
+                        vim.cmd("GPT!")
+                        vim.api.nvim_put({ selection[1] }, "", true, true)
                     end)
                     return true
                 end,

@@ -26,8 +26,7 @@ class GPTPlugin:
         self._multiline_was_regenerate = None
         self._multiline_submitted = False
         self._last_range = None
-        self._templates = {}
-        self._template_list = []
+        self._templates = []
 
         self._model = 'gpt-3.5-turbo'
         self._params = {}
@@ -118,9 +117,7 @@ class GPTPlugin:
             for line in opts['question_templates'].splitlines():
                 line = line.strip()
                 if not line: continue
-                args = line.split(' ')
-                assert args[0] == 'GPTTemplate', args[0]
-                self._add_gpt_template(args[1], *args[2:])
+                self._templates.append(line)
 
     def get_bot(self):
         from .workers import get_worker
@@ -212,7 +209,8 @@ class GPTPlugin:
         with self._critical_section():
             self._do_gpt_open(toggle=True)
 
-    def _do_gpt_open(self, toggle=False):
+    def _do_gpt_open(self, toggle=False, clear=False):
+        neo = False
         bufnr = self.nvim.funcs.bufnr("GPT")
         if bufnr == -1:
             self.nvim.command('rightbelow vnew')
@@ -245,16 +243,19 @@ class GPTPlugin:
             if winnr == -1:
                 self.nvim.command('rightbelow vsplit')
                 self.nvim.command('buffer ' + str(bufnr))
+                self.nvim.command('buffer ' + str(bufnr))
                 self.nvim.current.window.width = self._window_width
+                neo = True
             else:
                 self.nvim.command(str(winnr) + 'windo buffer')
+        return neo
 
     @neovim.command('GPTMultiline', nargs='*', sync=True)  # type: ignore
     def gpt_multiline(self, args):  # plan: (I)nput
         with self._critical_section():
             self._do_gpt_multiline(' '.join(args))
 
-    def _do_gpt_multiline(self, exist_question, regenerate=False):
+    def _do_gpt_multiline(self, exist_question, regenerate=False, clear=False, neo=False):
         buffer, reused = self._create_sub_window('GPTInput', modifiable=True, height=self._multiline_input_height, filetype='markdown', bufhidden='hide')
         if reused:
             question = '\n'.join(buffer[:])
@@ -273,6 +274,8 @@ class GPTPlugin:
             elif self._multiline_submitted:
                 self._multiline_submitted = False
                 buffer[:] = []
+            if clear and neo:
+                buffer[:] = []
             from .keymaps import gpt_multiline_edit_keymaps
             for line in gpt_multiline_edit_keymaps.splitlines():
                 line = line.strip()
@@ -280,7 +283,7 @@ class GPTPlugin:
             # print('nimadir', dir(self.nvim))
             if len(buffer[0]):
                 self.nvim.command('stopinsert')
-                if not regenerate:
+                if not regenerate and not clear:
                     self.nvim.feedkeys('gH', 'n')
             else:
                 self.nvim.command('startinsert')
@@ -311,13 +314,13 @@ class GPTPlugin:
             self._rid_last_line_cursor()
             self._transit_state('idle')
 
-    @neovim.command('GPT', nargs='*', sync=True)  # type: ignore
-    def gpt_input(self, args):  # plan: <CR> (i)nput
+    @neovim.command('GPT', nargs='*', bang=True, sync=True)  # type: ignore
+    def gpt_input(self, args, bang):  # plan: <CR> (i)nput
         with self._critical_section():
             question = self._compose_question(args)
-            self._do_gpt_open()
+            neo = self._do_gpt_open()
             if not args:
-                self._do_gpt_multiline('')
+                self._do_gpt_multiline('', clear=bang, neo=neo)
                 return
             self._do_gpt_stop()
             self._submit_question(question)
@@ -347,31 +350,14 @@ class GPTPlugin:
             self._do_gpt_stop()
             self._submit_question(question)
 
-    def _try_replace_template(self, arg):
-        if arg.startswith('@'):
-            key = arg[1:]
-            if key in self._templates:
-                return self._templates[key]
-        return arg
-
-    def _add_gpt_template(self, key, *args):
-        keys = key.split(',')
-        val = ' '.join(args)
-        for k in keys:
-            self._templates[k] = val
-        self._template_list.append((key, val))
-
     @neovim.command('GPTTemplate', nargs='+', sync=True)  # type: ignore
     def gpt_template(self, args):
         with self._critical_section():
-            self._add_gpt_template(*args)
-
-    def _join_args(self, args):
-        return ' '.join(self._try_replace_template(a) for a in args)
+            self._templates.append(' '.join(args))
 
     @neovim.command('GPTRegenerate', nargs='*', bang=True, sync=True)  # type: ignore
     def gpt_regenerate(self, args, bang):  # plan: (r)egenerate
-        additional_description = self._join_args(args)
+        additional_description = ' '.join(args)
         with self._critical_section():
             if self._last_question is None:
                 self.nvim.command('echo "No previous question asked"')
@@ -465,7 +451,7 @@ class GPTPlugin:
 
     @neovim.function('GPTTemplateList', sync=True)
     def gpt_template_list(self, args):
-        return self._template_list
+        return self._templates
 
     @neovim.function('GPTPromptHistory', sync=True)
     def gpt_prompt_history(self, args):
@@ -651,7 +637,7 @@ class GPTPlugin:
         return filetype
 
     def _compose_question(self, args, range_=None, nocode=False):
-        question = self._join_args(args)
+        question = ' '.join(args)
         curr_bufnr = self.nvim.funcs.bufnr('%')
         if range_ and curr_bufnr != self.nvim.funcs.bufnr('GPT'):
             self._last_bufnr = curr_bufnr
