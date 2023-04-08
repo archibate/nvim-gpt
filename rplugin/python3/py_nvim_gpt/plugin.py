@@ -202,7 +202,8 @@ class GPTPlugin:
                 if bufnr != -1:
                     winnr = self.nvim.funcs.bufwinnr(bufnr)
                     if winnr != -1:
-                        self.nvim.command(str(winnr) + 'wincmd q')
+                        self.nvim.command(str(winnr) + 'windo q')
+                    self.nvim.command('bd' + str(bufnr))
 
     @neovim.command('GPTToggle', sync=True)
     def gpt_toggle(self):

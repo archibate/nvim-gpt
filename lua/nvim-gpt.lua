@@ -22,6 +22,7 @@ end
 function M.setup(opts)
     if not opts.no_default_keymaps then
         add_default_keymaps()
+        vim.cmd [[ autocmd VimLeave * GPTClose ]]
     end
     M._setup_options = opts
 end
