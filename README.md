@@ -2,7 +2,7 @@
 
 Integrated **ChatGPT** and **Bing AI** in NeoVim just for neo-pioneers like you 😇
 
-## Pro tips
+## 🤩 Pro tips
 
 You may use `:GPTOpen` to open the GPT window, as well as `:GPTClose` and `:GPTToggle`. In the GPT window press `i` to start input question, but there are more efficient ways to submit questions and code to GPT.
 
@@ -42,13 +42,13 @@ You may use `:GPTOpen` to open the GPT window, as well as `:GPTClose` and `:GPTT
 - Press `q` or `<Esc>` to close the GPT window and back to where you're editing.
 - Press `i` to follow up with a new question (equivalent to `:GPT`).
 
-## Multi-backend support
+## 🌈 Multi-backend support
 
 You may use `:GPTModel <model_name>` to switch to another model, e.g. `:GPTModel creative` to switch to the Bing AI - 'creative'. The default model is `gpt-3.5-turbo`, which can be tweaked in setup options, see below.
 
 If you have [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim), use `:Telescope nvim-gpt gpt_model` to show a list of all GPT models to select from.
 
-## Install
+## 🤔 Install
 
 It's suggested to use [packer.nvim](https://github.com/wbthomason/packer.nvim) to manage NeoVim plugins, this plugin for example:
 
@@ -73,7 +73,7 @@ Then try run `:GPTOpen` command and if everything working fine the GPT window sh
 
 > If not, try `:UpdateRemotePlugins`.
 
-### For ChatGPT users
+### 🤖 For ChatGPT users
 
 [openai-python](https://github.com/openai/openai-python) is required for using the ChatGPT backend.
 
@@ -91,7 +91,7 @@ export OPENAI_API_KEY=sk-**********  # replace this with your API key
 
 3. and then restart your shell, enter nvim and choose `gpt-3.5-turbo` as model, which is default.
 
-### For Bing AI users
+### 👻 For Bing AI users
 
 [EdgeGPT](https://github.com/acheong08/EdgeGPT) is required for using the Bing AI backend.
 
@@ -107,7 +107,7 @@ pip install EdgeGPT
 
 3. Enter nvim and `:GPTModel balanced`. For setting Bing AI as default, add `model = 'balanced'` to setup options.
 
-### For Google users
+### 🤡 For Google users
 
 [googlesearch-python](https://pypi.org/project/googlesearch-python) is required for using the Google search backend.
 
@@ -117,7 +117,7 @@ pip install googlesearch-python
 
 Then enter nvim and `:GPTModel googlesearch-python`. Now search current word with `gy<CR>`, current line with `gs<CR>`.
 
-## Keymaps
+## ⌨️ Keymaps
 
 There are keymaps applied **by default** when loading this plugin. See [nvim-gpt.lua](lua/nvim-gpt.lua) and [keymaps.py](rplugin/python3/py_nvim_gpt/keymaps.py):
 
@@ -137,7 +137,7 @@ nnoremap <silent> gsm<CR> <Cmd>Telescope nvim-gpt gpt_model<CR>
 
 Can be disabled by `no_default_keymaps = true` option in setup.
 
-### GPT window keymaps
+### 😎 GPT window keymaps
 
 Apart from universal keymaps above, inside the GPT window, which is not modifiable, also have their own keymaps:
 
@@ -154,7 +154,7 @@ nnoremap <buffer><silent> q <Cmd>wincmd q<CR>
 nnoremap <buffer><silent> <Esc> <Cmd>wincmd q<CR>
 ```
 
-### Question editing buffer keymaps
+### 😍 Question editing buffer keymaps
 
 ```vim
 nnoremap <buffer><silent> <CR> <Cmd>GPTMultiline<CR>
@@ -171,7 +171,7 @@ nnoremap <buffer><silent> q <Cmd>wincmd q<CR>
 nnoremap <buffer><silent> <Esc> <Cmd>wincmd q<CR>
 ```
 
-## All setup options
+## 🧐 All setup options
 
 ```lua
 require'nvim-gpt'.setup {
@@ -259,4 +259,4 @@ Translate from Chinese to English, or English to Chinese.
 }
 ```
 
-Found bugs or any suggestions? Please let me know by opening a [GitHub issue](https://github.com/archibate/nvim-gpt/issues/new), I'm glad to help.
+Found bugs or any suggestions? Please let me know by opening a [GitHub issue](https://github.com/archibate/nvim-gpt/issues/new), I'm glad to help 😘
