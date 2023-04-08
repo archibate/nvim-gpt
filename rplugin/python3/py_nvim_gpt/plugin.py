@@ -21,11 +21,13 @@ class GPTPlugin:
         self._qa_count = 0
         self._stop_count = 0
         self._last_question = None
+        self._question_history = []
         self._last_bufnr = None
         self._multiline_was_regenerate = None
         self._multiline_submitted = False
         self._last_range = None
         self._templates = {}
+        self._template_list = []
 
         self._model = 'gpt-3.5-turbo'
         self._params = {}
@@ -124,7 +126,7 @@ class GPTPlugin:
         from .workers import get_worker
         return get_worker(self._model, self._params.get(self._model, dict()))
 
-    @neovim.command('GPTModel', nargs='?')  # type: ignore
+    @neovim.command('GPTModel', nargs='?', sync=True)  # type: ignore
     def gpt_model(self, args):
         with self._critical_section():
             if not args:
@@ -143,7 +145,7 @@ class GPTPlugin:
                 return
             self._model = model
 
-    @neovim.command('GPTLog')
+    @neovim.command('GPTLog', sync=True)
     def gpt_log(self):
         with self._critical_section():
             buffer, _ = self._create_sub_window('GPTLog', width=self._window_width)
@@ -190,12 +192,12 @@ class GPTPlugin:
             buffer = self.nvim.buffers[bufnr]
             return buffer, False
 
-    @neovim.command('GPTOpen')
+    @neovim.command('GPTOpen', sync=True)
     def gpt_open(self):
         with self._critical_section():
             self._do_gpt_open()
 
-    @neovim.command('GPTClose')
+    @neovim.command('GPTClose', sync=True)
     def gpt_close(self):
         with self._critical_section():
             for name in ('GPT', 'GPTInput', 'GPTLog'):
@@ -205,7 +207,7 @@ class GPTPlugin:
                     if winnr != -1:
                         self.nvim.command(str(winnr) + 'wincmd q')
 
-    @neovim.command('GPTToggle')
+    @neovim.command('GPTToggle', sync=True)
     def gpt_toggle(self):
         with self._critical_section():
             self._do_gpt_open(toggle=True)
@@ -247,7 +249,7 @@ class GPTPlugin:
             else:
                 self.nvim.command(str(winnr) + 'windo buffer')
 
-    @neovim.command('GPTMultiline', nargs='*')  # type: ignore
+    @neovim.command('GPTMultiline', nargs='*', sync=True)  # type: ignore
     def gpt_multiline(self, args):  # plan: (I)nput
         with self._critical_section():
             self._do_gpt_multiline(' '.join(args))
@@ -258,6 +260,7 @@ class GPTPlugin:
             question = '\n'.join(buffer[:])
             self.nvim.command('wincmd q')
             self._do_gpt_open()
+            self._do_gpt_stop()
             self._submit_question(question, regenerate=self._multiline_was_regenerate or False)
             self._multiline_submitted = True
             self._multiline_was_regenerate = None
@@ -284,7 +287,7 @@ class GPTPlugin:
             if self.nvim.funcs.exists('b:_no_enter_submit'):
                 self.nvim.command('unlet b:_no_enter_submit')
 
-    @neovim.command('GPTDiscard')
+    @neovim.command('GPTDiscard', sync=True)
     def gpt_discard(self):  # plan: (d)iscard
         with self._critical_section():
             self._do_gpt_open()
@@ -297,7 +300,7 @@ class GPTPlugin:
         bot = self.get_bot()
         bot.push_reset()
 
-    @neovim.command('GPTStop')
+    @neovim.command('GPTStop', sync=True)
     def gpt_stop(self):  # plan: (s)top
         with self._critical_section():
             self._do_gpt_stop()
@@ -308,40 +311,40 @@ class GPTPlugin:
             self._rid_last_line_cursor()
             self._transit_state('idle')
 
-    @neovim.command('GPT', nargs='*')  # type: ignore
+    @neovim.command('GPT', nargs='*', sync=True)  # type: ignore
     def gpt_input(self, args):  # plan: <CR> (i)nput
         with self._critical_section():
             question = self._compose_question(args)
-            self._do_gpt_stop()
             self._do_gpt_open()
             if not args:
                 self._do_gpt_multiline('')
                 return
+            self._do_gpt_stop()
             self._submit_question(question)
 
-    @neovim.command('GPTWrite', nargs='*', range=True)  # type: ignore
+    @neovim.command('GPTWrite', nargs='*', range=True, sync=True)  # type: ignore
     def gpt_write(self, args, range_):  # plan: g<CR>
         with self._critical_section():
             # if not self.nvim.current.buffer['modifiable']: raise
             if range_[0] == range_[1]:
                 range_ = (range_[0], range_[0] - 1)
             question = self._compose_question(args, range_, nocode=True)
-            self._do_gpt_stop()
             self._do_gpt_open()
             if not args:
                 self._do_gpt_multiline(question)
                 return
+            self._do_gpt_stop()
             self._submit_question(question)
 
-    @neovim.command('GPTCode', nargs='*', range=True)  # type: ignore
+    @neovim.command('GPTCode', nargs='*', range=True, sync=True)  # type: ignore
     def gpt_code(self, args, range_):  # plan: <CR> in visual
         with self._critical_section():
             question = self._compose_question(args, range_)
-            self._do_gpt_stop()
             self._do_gpt_open()
             if not args:
                 self._do_gpt_multiline(question)
                 return
+            self._do_gpt_stop()
             self._submit_question(question)
 
     def _try_replace_template(self, arg):
@@ -354,10 +357,11 @@ class GPTPlugin:
     def _add_gpt_template(self, key, *args):
         keys = key.split(',')
         val = ' '.join(args)
-        for key in keys:
-            self._templates[key] = val
+        for k in keys:
+            self._templates[k] = val
+        self._template_list.append((key, val))
 
-    @neovim.command('GPTTemplate', nargs='+')  # type: ignore
+    @neovim.command('GPTTemplate', nargs='+', sync=True)  # type: ignore
     def gpt_template(self, args):
         with self._critical_section():
             self._add_gpt_template(*args)
@@ -365,11 +369,10 @@ class GPTPlugin:
     def _join_args(self, args):
         return ' '.join(self._try_replace_template(a) for a in args)
 
-    @neovim.command('GPTRegenerate', nargs='*', bang=True)  # type: ignore
+    @neovim.command('GPTRegenerate', nargs='*', bang=True, sync=True)  # type: ignore
     def gpt_regenerate(self, args, bang):  # plan: (r)egenerate
         additional_description = self._join_args(args)
         with self._critical_section():
-            self._do_gpt_stop()
             if self._last_question is None:
                 self.nvim.command('echo "No previous question asked"')
                 return
@@ -380,6 +383,7 @@ class GPTPlugin:
             if bang:
                 self._do_gpt_multiline(question, regenerate=True)
             else:
+                self._do_gpt_stop()
                 self._submit_question(question, regenerate=True)
 
     def _submit_question(self, question, regenerate=False):
@@ -391,6 +395,7 @@ class GPTPlugin:
         # else:
         #     qa_count = str(self._qa_count) + ' (Regenerated)'
         self._last_question = question
+        self._question_history.append(question)
         question_ml = question.split('\n')
         question_ml = self._question_title.split('\n') + question_ml
         if regenerate:
@@ -409,7 +414,7 @@ class GPTPlugin:
         self._transit_state('running')
         self._lock_cursor_to_end()
 
-    @neovim.command('GPTAccept', bang=True)
+    @neovim.command('GPTAccept', bang=True, sync=True)
     def gpt_accept(self, bang):  # plan: (a)ccept
         with self._critical_section():
             self._do_gpt_open()
@@ -435,7 +440,7 @@ class GPTPlugin:
                 self._last_bufnr = None
                 self._last_range = None
 
-    @neovim.command('GPTYank', bang=True)
+    @neovim.command('GPTYank', bang=True, sync=True)
     def gpt_yank(self, bang):
         with self._critical_section():
             self._do_gpt_open()
@@ -446,15 +451,28 @@ class GPTPlugin:
             self.nvim.funcs.setreg('+', answer, 'l')
             self._do_gpt_open(toggle=True)
 
-    @neovim.command('GPTExecute')
+    @neovim.command('GPTExecute', sync=True)
     def gpt_execute(self):  # plan: e(x)ecute
         answer, _ = self._fetch_maybe_quoted_answer()
         answer = '\n'.join(answer)
         # execute python expressions directly in rplugin process
         # exec(compile(answer, '<GPTExecute>', 'exec'))
 
-    @neovim.command('GPTSync')
-    def gpt_sync(self):
+    @neovim.function('GPTModelList', sync=True)
+    def gpt_model_list(self, args):
+        from .workers import available_models
+        return self._model, available_models()
+
+    @neovim.function('GPTTemplateList', sync=True)
+    def gpt_template_list(self, args):
+        return self._template_list
+
+    @neovim.function('GPTPromptHistory', sync=True)
+    def gpt_prompt_history(self, args):
+        return self._question_history
+
+    @neovim.function('GPTSync', sync=True)
+    def gpt_sync(self, args):
         with self._critical_section():
             bufnr = self.nvim.funcs.bufnr('GPT')
             if bufnr == -1:
@@ -497,7 +515,7 @@ class GPTPlugin:
         elif state == 'running':
             assert self._state == 'idle'
             self.nvim.command('lua _gpt_sync_timer = vim.loop.new_timer()')
-            self.nvim.command('lua _gpt_sync_timer:start({interval}, {interval}, vim.schedule_wrap(function () vim.cmd [[GPTSync]] end))'.format(interval=self._update_interval))
+            self.nvim.command('lua _gpt_sync_timer:start({interval}, {interval}, vim.schedule_wrap(function () vim.cmd [[call GPTSync()]] end))'.format(interval=self._update_interval))
         self._state = state
 
     def _append_last_line(self, content):

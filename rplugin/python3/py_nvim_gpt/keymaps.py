@@ -9,7 +9,7 @@ nnoremap <buffer><silent> x <Cmd>GPTExecute<CR>
 nnoremap <buffer><silent> s <Cmd>GPTStop<CR>
 nnoremap <buffer><silent> q <Cmd>wincmd q<CR>
 nnoremap <buffer><silent> <Esc> <Cmd>wincmd q<CR>
-autocmd BufLeave <buffer> exec bufwinnr("GPTInput") == -1 ? "" : bufwinnr("GPTInput") . "wincmd q"
+autocmd BufHidden,BufDelete <buffer> exec bufwinnr("GPTInput") == -1 ? "" : bufwinnr("GPTInput") . "wincmd q"
 '''
 
 gpt_multiline_edit_keymaps = '''

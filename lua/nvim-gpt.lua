@@ -21,4 +21,16 @@ function M.setup(opts)
     M._setup_options = opts
 end
 
+function M.get_model_list()
+    return vim.api.nvim_call_function('GPTModelList', {}) or vim.api.nvim_call_function('GPTModelList', {}) or {'none', {'none'}}
+end
+
+function M.get_prompt_history()
+    return vim.api.nvim_call_function('GPTPromptHistory', {}) or vim.api.nvim_call_function('GPTPromptHistory', {}) or {}
+end
+
+function M.get_template_list()
+    return vim.api.nvim_call_function('GPTTemplateList', {}) or vim.api.nvim_call_function('GPTTemplateList', {}) or {}
+end
+
 return M

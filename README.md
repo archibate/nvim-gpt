@@ -44,7 +44,7 @@ In the GPT window:
 
 You may use `:GPTModel <model_name>` to switch to another model, e.g. `:GPTModel creative` to switch to the Bing AI - 'creative'. The default model is `gpt-3.5-turbo`, which can be tweaked in setup options, see below.
 
-If you have [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim), use `:Telescope gpt_models` to show a list of all GPT models to select from (TBD).
+If you have [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim), use `:Telescope gpt_model` to show a list of all GPT models to select from (TBD).
 
 ## Install
 
@@ -53,7 +53,7 @@ It's suggested to use [packer.nvim](https://github.com/wbthomason/packer.nvim) t
 ```lua
 use({
     'archibate/nvim-gpt',
-    -- optional for supporting ':Telescope gpt_models' and ':Telescope gpt_inputs' commands (TBD)
+    -- optional for supporting ':Telescope gpt_model' and ':Telescope gpt_inputs' commands (TBD)
     requires = { 'nvim-telescope/telescope.nvim' },
     config = function()
         require'nvim-gpt'.setup {
