@@ -271,8 +271,7 @@ class GPTPlugin:
                 self._multiline_submitted = False
                 buffer[:] = []
             from .keymaps import gpt_multiline_edit_keymaps
-            bufnr = self.nvim.funcs.bufnr('%')
-            for line in gpt_multiline_edit_keymaps.format(bufnr=bufnr).splitlines():
+            for line in gpt_multiline_edit_keymaps.splitlines():
                 line = line.strip()
                 if line: self.nvim.command(line)
             # print('nimadir', dir(self.nvim))

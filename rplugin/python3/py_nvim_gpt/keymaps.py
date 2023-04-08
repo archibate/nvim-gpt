@@ -9,6 +9,7 @@ nnoremap <buffer><silent> x <Cmd>GPTExecute<CR>
 nnoremap <buffer><silent> s <Cmd>GPTStop<CR>
 nnoremap <buffer><silent> q <Cmd>wincmd q<CR>
 nnoremap <buffer><silent> <Esc> <Cmd>wincmd q<CR>
+autocmd BufLeave <buffer> exec bufwinnr("GPTInput") == -1 ? "" : bufwinnr("GPTInput") . "wincmd q"
 '''
 
 gpt_multiline_edit_keymaps = '''
@@ -19,7 +20,6 @@ inoremap <buffer><silent> <Esc> <Esc><Cmd>let b:_no_enter_submit = 1<CR>
 snoremap <buffer><silent> <Esc> <Esc><Cmd>let b:_no_enter_submit = 1<CR>
 nnoremap <buffer><silent> q <Cmd>wincmd q<CR>
 nnoremap <buffer><silent> <Esc> <Cmd>wincmd q<CR>
-autocmd BufLeave <buffer={bufnr}> exec bufwinnr({bufnr}) == -1 ? "" : bufwinnr({bufnr}) . "wincmd q"
 '''
 
 preset_templates = '''

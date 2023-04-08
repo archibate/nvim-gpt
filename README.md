@@ -27,7 +27,7 @@ In the GPT prompt:
 - You may type 'How to fix this error?' to describe the task for GPT.
 - But we've already got some nice templates for you, to use the template named 'fix' for example, simply type: `@f` or `@fix`, it will be automatically replaced by `How to fix this error?`
 - There is also a useful template called `@q` or `@quote` which is equivalent to `Please wrap the final answer with triple quotes`, which not only gives us a better syntax highlighting for code, but also make it easier to seperate the real answer from GPT's descriptive text like `Sure` or `Here is the result:`, see below.
-- See [keymaps.py](rplugin/python3/py_nvim_gpt/keymaps.py) for a complete list of all templates provided by default, you may override the templates in the setup option `question_templates = ...`, see bottom.
+- See [keymaps.py](rplugin/python3/py_nvim_gpt/keymaps.py) or bottom for a complete list of all templates provided by default, you may override the templates in the setup option `question_templates = ...`.
 - If you want to edit multi-line questions, simply press `<Esc>` then `i` to enter insert mode again. Now pressing `<CR>` in insert mode won't trigger submit anymore, and you may use `<CR>` or `o` in normal mode to compose multi-line questions. After finished editing the question, press `<CR>` in normal mode to submit. The question buffer is remained when you use `r` to regenerate answer from GPT.
 
 In the GPT window:
@@ -44,7 +44,7 @@ In the GPT window:
 
 You may use `:GPTModel <model_name>` to switch to another model, e.g. `:GPTModel creative` to switch to the Bing AI - 'creative'. The default model is `gpt-3.5-turbo`, which can be tweaked in setup options, see below.
 
-If you have [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim), use `:Telescope gpt_models` to show a list of all GPT models to select from.
+If you have [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim), use `:Telescope gpt_models` to show a list of all GPT models to select from (TBD).
 
 ## Install
 
@@ -79,7 +79,7 @@ Then try run `:GPTOpen` command and if everything working fine the GPT window sh
 pip install openai
 ```
 
-1. Obtain an API key from OpenAI: https://beta.openai.com
+1. Obtain an API key from OpenAI: https://platform.openai.com/account/api-keys
 
 2. Add this to your `~/.bashrc`:
 
@@ -99,7 +99,9 @@ pip install EdgeGPT
 
 1. Obtain the cookies JSON via [Cookie Editor](https://microsoftedge.microsoft.com/addons/detail/cookieeditor/neaplmfkghagebokkhpjpoebhdledlfi) plugin from the [Bing site](https://bing.com/chat).
 
-2. Paste the cookies into file `~/.bing-cookies.json`.
+2. Click the 'Export' button on the Cookie editor to dump all the cookies as JSON, then paste all these cookies into a file `~/.bing-cookies.json`.
+
+> See https://github.com/acheong08/EdgeGPT#getting-authentication-required for more details.
 
 3. Enter nvim and `:GPTModel balanced`. For setting Bing AI as default, add `model = 'balanced'` to setup options.
 
@@ -118,7 +120,6 @@ Then enter nvim and `:GPTModel googlesearch-python`. Now search current word wit
 There are keymaps applied **by default** when loading this plugin. See [nvim-gpt.lua](lua/nvim-gpt.lua) and [keymaps.py](rplugin/python3/py_nvim_gpt/keymaps.py):
 
 ```vim
-" <CR> input, g<CR> line, gs<CR> word, gu<CR> file
 nnoremap <silent> <CR> <Cmd>GPT<CR>
 vnoremap <silent> <CR> <Cmd>GPTCode<CR>
 nnoremap <silent> g<CR> <Cmd>GPTWrite<CR>
@@ -156,7 +157,6 @@ inoremap <buffer><silent> <Esc> <Esc><Cmd>let b:_no_enter_submit = 1<CR>
 snoremap <buffer><silent> <Esc> <Esc><Cmd>let b:_no_enter_submit = 1<CR>
 nnoremap <buffer><silent> q <Cmd>wincmd q<CR>
 nnoremap <buffer><silent> <Esc> <Cmd>wincmd q<CR>
-autocmd BufLeave <buffer={bufnr}> exec bufwinnr({bufnr}) == -1 ? "" : bufwinnr({bufnr}) . "wincmd q"
 ```
 
 ## All setup options
