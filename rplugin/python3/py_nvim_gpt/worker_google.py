@@ -53,16 +53,6 @@ class Worker_Google(IWorker):
 
             self._answers.put(Done())
 
-        # sync.function(bot.close)()
-
-    @staticmethod
-    async def _async_ask(bot, question, style, callback):
-        wrote = 0
-        async for final, response in bot.ask_stream(prompt=question, conversation_style=style):
-            if not final:
-                callback(response[wrote:])
-                wrote = len(response)
-
 
 WorkerFactory.instance().register_worker_type('Google', Worker_Google)
 

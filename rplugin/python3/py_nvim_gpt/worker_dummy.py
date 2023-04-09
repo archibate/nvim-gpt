@@ -6,9 +6,9 @@ from .io_tags import Done, UpdateParams, Reset, Rewind
 
 class Worker_Dummy(IWorker):
     MODELS = [
-        'lazy',
-        'crasher',
-        'repeater',
+        'dummy',
+        # 'crash-dummy',
+        # 'lazy-dummy',
     ]
 
     PARAMS = dict(
@@ -56,10 +56,7 @@ class Worker_Dummy(IWorker):
             last_ctx = ctx
             print('dummy got context:')
             print(ctx)
-            if self._model == 'repeater':
-                for c in question:
-                    callback(c)
-            elif self._model == 'crasher':
+            if self._model == 'crash-dummy':
                 callback('execuse')
                 callback(' me')
                 callback('?')
@@ -68,7 +65,7 @@ class Worker_Dummy(IWorker):
                 callback(' going')
                 callback(' to')
                 raise RuntimeError('crasher bot crashed!')
-            else:
+            elif self._model == 'lazy-dummy':
                 callback('execuse')
                 callback(' me')
                 callback('?')
@@ -78,6 +75,9 @@ class Worker_Dummy(IWorker):
                 callback(' dummy')
                 callback(' bot')
                 callback('.')
+            else:
+                for c in question:
+                    callback(c)
             print()
             ctx += answer
             print('dummy replies:')

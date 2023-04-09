@@ -48,6 +48,8 @@ You may use `:GPTModel <model_name>` to switch to another model, e.g. `:GPTModel
 
 If you have [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim), use `:Telescope nvim-gpt gpt_model` to show a list of all GPT models to select from.
 
+Currently supported backends are: `gpt-3.5-turbo`, `gpt-4`, `gpt-4-32k`, `creative`, `balanced`, `percise`, `google-search`.
+
 ## 🤔 Install
 
 It's suggested to use [packer.nvim](https://github.com/wbthomason/packer.nvim) to manage NeoVim plugins, this plugin for example:
@@ -59,7 +61,7 @@ use({
     requires = { 'nvim-telescope/telescope.nvim' },
     config = function()
         require'nvim-gpt'.setup {
-            model = 'gpt-3.5-turbo',  -- alternatives: 'gpt-3.5-turbo', 'gpt-4', 'gpt-4-32k', 'creative', 'balanced', 'percise', 'google-search'
+            model = 'gpt-3.5-turbo',
             window_width = 45,
             -- see more setup options in section 'Setup options' below
         }
@@ -186,6 +188,12 @@ require'nvim-gpt'.setup {
             n = 1,
             presence_penalty = 0,
             frequency_penalty = 0,
+        },
+        ['gpt-4'] = {
+            -- same as above
+        },
+        ['gpt-4-32k'] = {
+            -- same as above
         },
         ['google-search'] = {
             -- see https://pypi.org/project/googlesearch-python
