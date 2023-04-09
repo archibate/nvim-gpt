@@ -1,6 +1,6 @@
 from .worker import IWorker, WorkerFactory
 
-from . import worker_dummy as _
+# from . import worker_dummy as _
 # from . import worker_rwkv as _
 from . import worker_bing as _
 from . import worker_gpt as _

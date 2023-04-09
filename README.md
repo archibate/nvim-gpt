@@ -59,7 +59,7 @@ use({
     requires = { 'nvim-telescope/telescope.nvim' },
     config = function()
         require'nvim-gpt'.setup {
-            model = 'gpt-3.5-turbo',
+            model = 'gpt-3.5-turbo',  -- alternatives: 'gpt-3.5-turbo', 'gpt-4', 'gpt-4-32k', 'creative', 'balanced', 'percise', 'google-search'
             window_width = 45,
             -- see more setup options in section 'Setup options' below
         }
@@ -89,7 +89,7 @@ pip install openai
 export OPENAI_API_KEY=sk-**********  # replace this with your API key
 ```
 
-3. and then restart your shell, enter nvim and choose `gpt-3.5-turbo` as model, which is default.
+3. and then restart your shell, enter nvim and choose `gpt-3.5-turbo` or `gpt-4` as model, which is default.
 
 ### 👻 For Bing AI users
 
@@ -105,7 +105,7 @@ pip install EdgeGPT
 
 > See https://github.com/acheong08/EdgeGPT#getting-authentication-required for more details.
 
-3. Enter nvim and `:GPTModel balanced`. For setting Bing AI as default, add `model = 'balanced'` to setup options.
+3. Enter nvim and `:GPTModel balanced`. For setting Bing AI as default, add `model = 'balanced'` to setup options. You may also use `creative` or `percise` instead.
 
 ### 🤡 For Google users
 
@@ -175,7 +175,7 @@ nnoremap <buffer><silent> <Esc> <Cmd>wincmd q<CR>
 
 ```lua
 require'nvim-gpt'.setup {
-    -- which backend to use: gpt-3.5-turbo, creative, balanced, percise, google-search
+    -- which backend to use: 'gpt-3.5-turbo', 'gpt-4', 'gpt-4-32k', 'creative', 'balanced', 'percise', 'google-search'
     model = 'gpt-3.5-turbo',
     -- may provide specific parameters like temperature depends on models
     params = {

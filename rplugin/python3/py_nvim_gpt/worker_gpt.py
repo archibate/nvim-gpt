@@ -7,6 +7,11 @@ from .io_tags import Done, UpdateParams, Reset, Rewind
 class Worker_ChatGPT(IWorker):
     MODELS = [
         'gpt-3.5-turbo',
+        'gpt-4',
+        'gpt-4-32k',
+        # 'text-davinci-003',
+        # 'text-davinci-002',
+        # 'code-davinci-002',
     ]
 
     PARAMS = dict(
