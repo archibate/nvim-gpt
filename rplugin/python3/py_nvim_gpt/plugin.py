@@ -142,14 +142,24 @@ class GPTPlugin:
             self._do_gpt_stop()
             self._qa_count = 0
             self._model = model
-            bufnr = self.nvim.funcs.bufnr("GPT")
+            bufnr = self.nvim.funcs.bufnr("__GPT__")
             if bufnr != -1:
                 self._set_welcome_message()
+    #
+    # @neovim.command('GPTSystem', sync=True)
+    # def gpt_system(self):  # plan: (D)iscard
+    #     # from .system import system_info
+    #     from .system2 import system_simplified as system_info
+    #     from .system3 import system_desc as system_info
+    #     with self._critical_section():
+    #         self._do_gpt_open()
+    #         self._do_gpt_reset()
+    #         self._submit_question('%system ' + system_info)
 
     @neovim.command('GPTLog', sync=True)
     def gpt_log(self):
         with self._critical_section():
-            buffer, _ = self._create_sub_window('GPTLog', width=self._window_width)
+            buffer, _ = self._create_sub_window('__GPTLog__', width=self._window_width)
             buffer.options['modifiable'] = True
             try:
                 buffer[:] = LogSystem.instance().read_log().splitlines()
@@ -201,7 +211,7 @@ class GPTPlugin:
     @neovim.command('GPTClose', sync=True)
     def gpt_close(self):
         with self._critical_section():
-            for name in ('GPT', 'GPTInput', 'GPTLog'):
+            for name in ('__GPT__', '__GPTInput__', '__GPTLog__'):
                 bufnr = self.nvim.funcs.bufnr(name)
                 if bufnr != -1:
                     winnr = self.nvim.funcs.bufwinnr(bufnr)
@@ -216,12 +226,12 @@ class GPTPlugin:
 
     def _do_gpt_open(self, toggle=False, clear=False):
         neo = False
-        bufnr = self.nvim.funcs.bufnr("GPT")
+        bufnr = self.nvim.funcs.bufnr("__GPT__")
         if bufnr == -1:
             self.nvim.command('rightbelow vnew')
             buffer = self.nvim.current.buffer
             window = self.nvim.current.window
-            buffer.name = 'GPT'
+            buffer.name = '__GPT__'
             buffer.options['buftype'] = 'nofile'
             buffer.options['filetype'] = 'markdown'
             buffer.options['bufhidden'] = 'hide'
@@ -261,7 +271,7 @@ class GPTPlugin:
             self._do_gpt_question(' '.join(args))
 
     def _do_gpt_question(self, exist_question, regenerate=False, clear=False, neo=False):
-        buffer, reused = self._create_sub_window('GPTInput', modifiable=True, height=self._multiline_input_height, filetype='markdown', bufhidden='hide')
+        buffer, reused = self._create_sub_window('__GPTInput__', modifiable=True, height=self._multiline_input_height, filetype='markdown', bufhidden='hide')
         if reused:
             question = '\n'.join(buffer[:])
             self.nvim.command('wincmd q')
@@ -288,8 +298,8 @@ class GPTPlugin:
             # print('nimadir', dir(self.nvim))
             if len(buffer[0]):
                 self.nvim.command('stopinsert')
-                if not regenerate and not clear:
-                    self.nvim.feedkeys('gH', 'n')
+                # if not regenerate and not clear:
+                    # self.nvim.feedkeys('gH', 'n')
             else:
                 self.nvim.command('startinsert')
             if self.nvim.funcs.exists('b:_no_enter_submit'):
@@ -432,7 +442,7 @@ class GPTPlugin:
                 self._last_range = None
 
     @neovim.command('GPTYank', bang=True, sync=True)
-    def gpt_yank(self, bang):
+    def gpt_yank(self, bang):  # plan: (c)opy
         with self._critical_section():
             self._do_gpt_open()
             answer, full_answer = self._fetch_maybe_quoted_answer()
@@ -446,6 +456,15 @@ class GPTPlugin:
     def gpt_execute(self):  # plan: e(x)ecute
         answer, _ = self._fetch_maybe_quoted_answer()
         answer = '\n'.join(answer)
+        import os, tempfile
+        with tempfile.NamedTemporaryFile('w') as f:
+            f.write('set -e\n' + answer + '\n')
+            f.flush()
+            exitcode = os.system('bash ' + f.name)
+            if exitcode:
+                self.nvim.command('echo "Shell exited with {}. See :GPTLog for more details."'.format(exitcode))
+            else:
+                self.nvim.command('echo "Shell exited successfully."')
         # execute python expressions directly in rplugin process
         # exec(compile(answer, '<GPTExecute>', 'exec'))
 
@@ -465,7 +484,7 @@ class GPTPlugin:
     @neovim.function('GPTSync', sync=True)
     def gpt_sync(self, args):
         with self._critical_section():
-            bufnr = self.nvim.funcs.bufnr('GPT')
+            bufnr = self.nvim.funcs.bufnr('__GPT__')
             if bufnr == -1:
                 return
             if bufnr == self.nvim.funcs.bufnr('%'):
@@ -537,7 +556,7 @@ class GPTPlugin:
         self._lock_cursor_to_end()
 
     def _lock_cursor_to_end(self):
-        if self.nvim.funcs.bufnr('%') != self.nvim.funcs.bufnr('GPT'):
+        if self.nvim.funcs.bufnr('%') != self.nvim.funcs.bufnr('__GPT__'):
             return
         if self._lock_last_line != 'force':
             if self._lock_last_line in ('last-char', 'last-line'):
@@ -566,7 +585,7 @@ class GPTPlugin:
             buffer[:] = lines
 
     def _get_buffer(self):
-        bufnr = self.nvim.funcs.bufnr("GPT")
+        bufnr = self.nvim.funcs.bufnr("__GPT__")
         if bufnr == -1:
             raise RuntimeError('GPT window not open, please :GPTOpen first')
         return self.nvim.buffers[bufnr]
@@ -626,6 +645,8 @@ class GPTPlugin:
     def _determine_range_filetype(self, range_):
         buffer = self.nvim.current.buffer
         filetype = buffer.options['filetype']
+        if filetype == 'toggleterm':
+            filetype = 'bash'
         if filetype == 'markdown':
             ft = None
             for i in range(1, min(len(buffer) + 1, range_[0])):
@@ -644,7 +665,7 @@ class GPTPlugin:
     def _compose_question(self, args, range_=None, nocode=False):
         question = ' '.join(args)
         curr_bufnr = self.nvim.funcs.bufnr('%')
-        if range_ and curr_bufnr != self.nvim.funcs.bufnr('GPT'):
+        if range_ and curr_bufnr != self.nvim.funcs.bufnr('__GPT__'):
             self._last_bufnr = curr_bufnr
             self._last_range = tuple(range_)
         if range_ is not None:

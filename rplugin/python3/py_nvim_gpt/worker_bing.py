@@ -68,6 +68,8 @@ class Worker_BingAI(IWorker):
         wrote = 0
         async for final, response in bot.ask_stream(prompt=question, conversation_style=style):
             if not final:
+                if len(response) < wrote:
+                    callback('[Bing revoked their response]')
                 callback(response[wrote:])
                 wrote = len(response)
 

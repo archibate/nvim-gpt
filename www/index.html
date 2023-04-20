@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat with Robot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f1f1f1;
+        }
+
+        #chat-container {
+            width: 400px;
+            margin: 50px auto;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+        }
+
+        #chat-header {
+            background-color: #4CAF50;
+            color: #fff;
+            height: 60px;
+            text-align: center;
+            font-size: 24px;
+            line-height: 60px;
+            border-radius: 5px 5px 0 0;
+        }
+
+        #chat-history {
+            height: 400px;
+            overflow-y: scroll;
+            margin: 0;
+            padding: 0 10px;
+        }
+
+        .chat-message {
+            margin: 10px;
+            padding: 10px;
+            background-color: #f1f1f1;
+            border-radius: 5px;
+            max-width: 70%;
+        }
+
+        .chat-message.bot-message {
+            background-color: #4CAF50;
+            color: #fff;
+            align-self: flex-start;
+        }
+
+        .chat-message.user-message {
+            background-color: #008CBA;
+            color: #fff;
+            align-self: flex-end;
+        }
+
+        #chat-input-container {
+            display: flex;
+            align-items: center;
+            height: 60px;
+            border-top: 1px solid #ccc;
+            padding: 10px;
+        }
+
+        #chat-input {
+            width: 100%;
+            height: 60px;
+            border: none;
+            border-top: 1px solid #ccc;
+            padding: 10px;
+            font-size: 16px;
+        }
+
+        #chat-input:focus {
+            outline: none;
+        }
+
+#chat-input {
+    flex: 1 1 80%;
+    height: 100%;
+    border: none;
+    font-size: 16px;
+    padding: 0 10px;
+}
+
+#send-button {
+    flex: 1 1 20%;
+    height: 100%;
+    margin-left: 10px;
+    background-color: #008CBA;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease-in-out;
+}
+
+#send-button:hover {
+    background-color: #006B87;
+}
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="chat-header">
+            Chat with Robot
+        </div>
+        <div id="chat-history">
+            <div class="chat-message bot-message">
+                Hello! How can I assist you today?
+            </div>
+        </div>
+        <div id="chat-input-container">
+            <input type="text" id="chat-input" placeholder="Type your message here...">
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+    <script>
+        const chatHistory = document.getElementById('chat-history');
+        const chatInput = document.getElementById('chat-input');
+        const sendButton = document.getElementById('send-button');
+        var messages = []; // ['bot', 'Hello! How can I assist you today?']];
+
+        sendButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keydown', (event) => {
+            if (event.keyCode === 13) {
+                sendMessage();
+            }
+        });
+
+        function appendMessage(message, type) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('chat-message');
+            messageElement.classList.add(`${type}-message`);
+            messageElement.innerText = message;
+
+            chatHistory.appendChild(messageElement);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function pushMessage(message) {
+            // Display each message in the chat history
+            messages.push(message);
+            appendMessage(message[1], message[0]);
+        }
+
+        function appendLastMessage(delta) {
+            // Display each message in the chat history
+            messages[messages.length - 1][1] += delta;
+            chatHistory.lastElementChild.innerText += delta;
+        }
+
+        function getResponse(messages) {
+          // Construct the payload for the AJAX request
+          const payload = JSON.stringify({ messages });
+
+          // Set up the AJAX request
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", "/api/chat");
+          xhr.setRequestHeader("Content-Type", "application/json");
+
+          // Define the callback function for when the AJAX request receives a response
+          xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+              if (xhr.status === 200) {
+                const response = JSON.parse(xhr.responseText);
+                const status = response.status;
+                const message = response.message;
+
+                // Update the chat history based on the response
+                switch (status) {
+                  case "STREAMING":
+                    // Show the current reply in the chat history
+                    appendLastMessage(message);
+
+                    // Make another AJAX request for the next chunk of data
+                    getResponse(messages);
+                    break;
+
+                  case "FINISHED":
+                    // Show the final reply in the chat history
+                    appendLastMessage(message);
+                    break;
+
+                  case "ERROR":
+                    // Show an error message in the chat history
+                    const errorMessage = "ERROR: " + response.message;
+                    appendLastMessage(errorMessage);
+                    break;
+
+                  default:
+                    break;
+                }
+              } else {
+                // Show an error message in the chat history
+                const errorMessage = `Error: ${xhr.status}`;
+                messages.push(["bot", errorMessage]);
+                chatHistory.innerHTML = "";
+                messages.forEach((message) => {
+                  appendMessage(message[1], message[0]);
+                });
+              }
+            }
+          };
+
+          // Send the AJAX request
+          xhr.send(payload);
+        }
+
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (message.length > 0) {
+                pushMessage(["user", message]); // Add the user's message to the chat history
+                chatInput.value = "";
+                getResponse(messages); // Pass the entire chat history to getResponse()
+            }
+        }
+    </script>
+</body>
+</html>

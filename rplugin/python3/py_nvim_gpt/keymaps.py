@@ -1,10 +1,13 @@
 gpt_window_keymaps = '''
-" (i)nput (a)ccept (r)egenerate (d)iscard e(x)ecute (s)top (q)uit
+" (i)nput (a)ccept (c)opy (r)egenerate (d)iscard e(x)ecute (s)top (q)uit
 nnoremap <buffer><silent> i <Cmd>GPT<CR>
 nnoremap <buffer><silent> a <Cmd>GPTAccept<CR>
 nnoremap <buffer><silent> A <Cmd>GPTAccept!<CR>
+nnoremap <buffer><nowait><silent> c <Cmd>GPTYank<CR>
+nnoremap <buffer><nowait><silent> C <Cmd>GPTYank!<CR>
 nnoremap <buffer><silent> r <Cmd>GPTRegenerate!<CR>
 nnoremap <buffer><silent> dd <Cmd>GPTDiscard<CR>
+nnoremap <buffer><silent> D <Cmd>GPTSystem<CR>
 nnoremap <buffer><silent> x <Cmd>GPTExecute<CR>
 nnoremap <buffer><silent> s <Cmd>GPTStop<CR>
 nnoremap <buffer><silent> q <Cmd>wincmd q<CR>

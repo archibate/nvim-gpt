@@ -1,4 +1,5 @@
 import os
+import traceback
 
 from .worker import IWorker, WorkerFactory
 from .io_tags import Done, UpdateParams, Reset, Rewind
@@ -20,7 +21,7 @@ class Worker_ChatGPT(IWorker):
             n = 1,
             presence_penalty = 0,
             frequency_penalty = 0,
-            stream = False,
+            stream = True,
     )
 
     def _worker(self):
@@ -52,14 +53,39 @@ class Worker_ChatGPT(IWorker):
                 self._params = dict(question.params)
                 continue
 
+            if question.startswith('%system '):
+                messages.append({
+                    'role': 'system',
+                    'content': question[len('%system '):],
+                })
+                self._answers.put(Done())
+                continue
+            if question.startswith('%assistant '):
+                messages.append({
+                    'role': 'assistant',
+                    'content': question[len('%assistant '):],
+                })
+                self._answers.put(Done())
+                continue
+
             messages.append({
                 'role': 'user',
                 'content': question,
             })
 
             print('ChatGPT starts request...')
-            completion = openai.ChatCompletion.create(
-                    model=self._model, messages=messages, **self._params)
+            try:
+                completion = openai.ChatCompletion.create(
+                        model=self._model, messages=messages, **self._params)
+            except:
+                error = traceback.format_exc()
+                messages.pop()
+                print('ChatGPT got error')
+                traceback.print_exc()
+                self._answers.put("**OPENAI ERROR**\n")
+                self._answers.put(error)
+                self._answers.put(Done())
+                continue
 
             print('ChatGPT replies:')
             if self._params['n'] > 1 or not self._params['stream']:
@@ -79,12 +105,13 @@ class Worker_ChatGPT(IWorker):
                 for part in completion:
                     choices = part["choices"]  # type: ignore
                     assert len(choices) == 1
-                    if 'message' not in choices[0]:
-                        raise RuntimeError('no message found in {}'.format(choices))
-                    resp = choices[0]["message"]["content"]
-                    print(resp, end='', flush=True)
-                    answer += resp
-                    self._answers.put(resp)
+                    if 'delta' not in choices[0]:
+                        raise RuntimeError('no delta found in {}'.format(choices))
+                    if 'content' in choices[0]['delta']:
+                        resp = choices[0]["delta"]["content"]
+                        print(resp, end='', flush=True)
+                        answer += resp
+                        self._answers.put(resp)
                 messages.append({'role': 'assistant', 'content': answer})
                 self._answers.put(Done())
 
