@@ -112,4 +112,5 @@ def api_chat():
 
 if __name__ == "__main__":
     initialize_db()
-    app.run(debug=True)
+    #app.run(debug=True)
+    app.run(debug=False, host=os.environ.get("WSGI_HOST", "0.0.0.0"), port=int(os.environ.get("WSGI_PORT", "8060")))
