@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat with Robot</title>
     <style>
         body {
@@ -41,7 +42,8 @@
             padding: 10px;
             background-color: #f1f1f1;
             border-radius: 5px;
-            max-width: 70%;
+            max-width: 80%;
+            overflow-wrap: break-word;
         }
 
         .chat-message.bot-message {
@@ -118,6 +120,7 @@
             <button id="send-button">Send</button>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         const chatHistory = document.getElementById('chat-history');
         const chatInput = document.getElementById('chat-input');
@@ -131,11 +134,42 @@
             }
         });
 
+        var code_block_id = 1;
+
+        function parseMarkdown(element, md) {
+            html = marked.parse(md);
+            html = html.replace('<p>', '').replace('</p>', '<br/>');
+            var callbacks = [];
+            var index = 0;
+            while ((index = html.indexOf('<code', index)) != -1) {
+                const preIndex = html.lastIndexOf('<pre>', index);
+                const preEndIndex = html.lastIndexOf('</pre>', index);
+                if (preIndex != -1 && (preEndIndex == -1 || preIndex > preEndIndex)) {
+                    const replacement = `<button id="copy-button-${code_block_id}">Copy</button><br/><code id="code-block-${code_block_id}"`;
+                    html = html.slice(0, index) + replacement + html.slice(index + 5);
+                    index += replacement.length;
+                    const id = code_block_id;
+                    callbacks.push(() => document.getElementById(`copy-button-${id}`).addEventListener("click", () => {
+                        const code = document.getElementById(`code-block-${id}`).innerText;
+                        navigator.clipboard.writeText(code);
+                    }));
+                    code_block_id++;
+                } else {
+                    index += 6;
+                }
+            }
+            if (html.endsWith('<br/>')) {
+                html = html.slice(0, -5);
+            }
+            element.innerHTML = html;
+            callbacks.forEach((f) => f());
+        }
+
         function appendMessage(message, type) {
             const messageElement = document.createElement('div');
             messageElement.classList.add('chat-message');
             messageElement.classList.add(`${type}-message`);
-            messageElement.innerText = message;
+            parseMarkdown(messageElement, message);
 
             chatHistory.appendChild(messageElement);
             chatHistory.scrollTop = chatHistory.scrollHeight;
@@ -150,12 +184,13 @@
         function appendLastMessage(delta) {
             // Display each message in the chat history
             messages[messages.length - 1][1] += delta;
-            chatHistory.lastElementChild.innerText += delta;
+            parseMarkdown(chatHistory.lastElementChild, messages[messages.length - 1][1]);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
         }
 
         function getResponse(messages) {
           // Construct the payload for the AJAX request
-          const payload = JSON.stringify({ messages });
+          const payload = messages != null ? JSON.stringify({ messages }) : JSON.stringify({});
 
           // Set up the AJAX request
           const xhr = new XMLHttpRequest();
@@ -177,7 +212,7 @@
                     appendLastMessage(message);
 
                     // Make another AJAX request for the next chunk of data
-                    getResponse(messages);
+                    getResponse(null);
                     break;
 
                   case "FINISHED":
@@ -196,12 +231,8 @@
                 }
               } else {
                 // Show an error message in the chat history
-                const errorMessage = `Error: ${xhr.status}`;
-                messages.push(["bot", errorMessage]);
-                chatHistory.innerHTML = "";
-                messages.forEach((message) => {
-                  appendMessage(message[1], message[0]);
-                });
+                const errorMessage = `HTTP ERROR: ${xhr.status}`;
+                appendLastMessage(errorMessage);
               }
             }
           };
@@ -216,6 +247,7 @@
                 pushMessage(["user", message]); // Add the user's message to the chat history
                 chatInput.value = "";
                 getResponse(messages); // Pass the entire chat history to getResponse()
+                pushMessage(["bot", ""]);
             }
         }
     </script>
