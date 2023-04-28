@@ -300,10 +300,12 @@ class GPTPlugin:
                 self.nvim.command('stopinsert')
                 # if not regenerate and not clear:
                     # self.nvim.feedkeys('gH', 'n')
+                if not self.nvim.funcs.exists('b:_no_enter_submit'):
+                    self.nvim.command('let b:_no_enter_submit = 1')
             else:
                 self.nvim.command('startinsert')
-            if self.nvim.funcs.exists('b:_no_enter_submit'):
-                self.nvim.command('unlet b:_no_enter_submit')
+                if self.nvim.funcs.exists('b:_no_enter_submit'):
+                    self.nvim.command('unlet b:_no_enter_submit')
 
     @neovim.command('GPTDiscard', sync=True)
     def gpt_discard(self):  # plan: (d)iscard
