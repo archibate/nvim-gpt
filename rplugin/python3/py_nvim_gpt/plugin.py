@@ -71,14 +71,14 @@ class GPTPlugin:
 
         self._take_setup_options()
 
-        if not self._templates:
-            from .keymaps import preset_templates
-            for line in preset_templates.splitlines():
-                line = line.strip()
-                if not line: continue
-                args = line.split(' ')
-                assert args[0] == 'GPTTemplate', args[0]
-                self._add_gpt_template(args[1], *args[2:])
+        # if not self._templates:
+            # from .keymaps import preset_templates
+            # for line in preset_templates.splitlines():
+                # line = line.strip()
+                # if not line: continue
+                # args = line.split(' ')
+                # if args[0] == 'GPTTemplate':
+                    # self._add_gpt_template(args[1], *args[2:])
 
     def _take_setup_options(self):
         opts = self.nvim.exec_lua("vim.g._gpt_setup_options = require'nvim-gpt'._setup_options")
