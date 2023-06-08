@@ -87,6 +87,8 @@ class GPTPlugin:
             raise RuntimeError("no setup options provided, please add require'nvim-gpt'._setup{} to your init.lua")
 
         print('setup options:', opts)
+        if not isinstance(opts, dict):
+            opts = dict()
 
         update_keys = [
             'model',
@@ -107,7 +109,7 @@ class GPTPlugin:
                 assert hasattr(self, '_' + k), k
                 setattr(self, '_' + k, opts[k])
 
-        welcome = opts.get('welcome_messages', 'fancy')
+        welcome = opts.get('welcome_messages', '🤖 {}')
         if welcome != 'fancy':
             self._welcome_messages.clear()
             if welcome != 'none':

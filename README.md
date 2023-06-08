@@ -75,6 +75,8 @@ Then try run `:GPTOpen` command and if everything working fine the GPT window sh
 
 > If not, try `:UpdateRemotePlugins`.
 
+> Make sure you have Python3 and ran `python3 -m pip install neovim`
+
 ### 🤖 For ChatGPT users
 
 [openai-python](https://github.com/openai/openai-python) is required for using the ChatGPT backend.
