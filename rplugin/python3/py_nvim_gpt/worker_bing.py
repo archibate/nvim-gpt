@@ -17,7 +17,7 @@ class Worker_BingAI(IWorker):
 
     def _worker(self):
         print('BingAI started')
-        import EdgeGPT
+        from EdgeGPT import EdgeGPT
         from . import async_to_sync as sync
 
         cookies_path = '~/.bing-cookies.json'
