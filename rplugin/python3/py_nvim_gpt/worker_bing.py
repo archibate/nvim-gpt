@@ -17,7 +17,10 @@ class Worker_BingAI(IWorker):
 
     def _worker(self):
         print('BingAI started')
-        import EdgeGPT
+        try:
+            from EdgeGPT.EdgeGPT import Chatbot, ConversationStyle
+        except:
+            from EdgeGPT import Chatbot, ConversationStyle  # type: ignore
         from . import async_to_sync as sync
 
         cookies_path = '~/.bing-cookies.json'
@@ -28,7 +31,7 @@ class Worker_BingAI(IWorker):
             raise RuntimeError('file ~/.bing-cookies.json not found (please follow instructions in https://github.com/archibate/nvim-gpt/blob/main/README.md#for-bing-ai-users)')
         with open(cookies_path, 'r') as f:
             cookies = json.load(f)
-        bot = EdgeGPT.Chatbot(cookies=cookies)
+        bot = Chatbot(cookies=cookies)
 
         while True:
             print('BingAI waiting for question')
@@ -54,7 +57,7 @@ class Worker_BingAI(IWorker):
                     self._answers.put(part)
 
             print('BingAI starts request...')
-            style = getattr(EdgeGPT.ConversationStyle, self._model)
+            style = getattr(ConversationStyle, self._model)
             sync.function(self._async_ask)(bot, question, style, callback)
 
             print('BingAI replies:')
