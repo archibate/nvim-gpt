@@ -1,4 +1,0 @@
-openai
-EdgeGPT
-googlesearch-python
-tiktoken

@@ -9,7 +9,7 @@ class Worker_BingAI(IWorker):
     MODELS = [
         'creative',
         'balanced',
-        'percise',
+        'precise',
     ]
 
     PARAMS = dict(
